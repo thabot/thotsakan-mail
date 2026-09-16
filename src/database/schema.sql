@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS email_logs (
   attempts_history TEXT, -- JSON Array of attempt results
   save_to_sent_items INTEGER NOT NULL DEFAULT 0,
   is_sync INTEGER NOT NULL DEFAULT 0,
+  message_payload TEXT, -- Serialized JSON of EmailMessage for async dispatch
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   sent_at TEXT,
   opened_at TEXT,
@@ -94,6 +95,18 @@ CREATE TABLE IF NOT EXISTS email_logs (
   clicked_at TEXT,
   click_count INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (account_id) REFERENCES email_accounts(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS routing_rules (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  condition_type TEXT NOT NULL, -- 'domain_match' | 'subject_contains' | 'recipient_regex'
+  condition_value TEXT NOT NULL,
+  target_account_id TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (target_account_id) REFERENCES email_accounts(id) ON DELETE CASCADE
 );
 
 -- High-performance Indices
@@ -106,3 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_email_logs_tenant_status
 
 CREATE INDEX IF NOT EXISTS idx_suppression 
   ON suppression_list(tenant_id, email);
+
+CREATE INDEX IF NOT EXISTS idx_routing_rules_tenant 
+  ON routing_rules(tenant_id, priority DESC);
+

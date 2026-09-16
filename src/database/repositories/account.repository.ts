@@ -64,4 +64,42 @@ export class AccountRepository {
     `);
     stmt.run(encryptedToken, expiresAt, id);
   }
+
+  public update(id: string, tenantId: string, updates: Partial<{
+    name: string;
+    fromEmail: string;
+    fromName: string;
+    dailyQuotaLimit: number;
+    rateLimitPerMinute: number;
+    fallbackAccountId: string | null;
+    isActive: boolean;
+    credentials?: string;
+  }>): void {
+    const fields: string[] = [];
+    const params: any[] = [];
+
+    if (updates.name !== undefined) { fields.push('name = ?'); params.push(updates.name); }
+    if (updates.fromEmail !== undefined) { fields.push('from_email = ?'); params.push(updates.fromEmail); }
+    if (updates.fromName !== undefined) { fields.push('from_name = ?'); params.push(updates.fromName); }
+    if (updates.dailyQuotaLimit !== undefined) { fields.push('daily_quota_limit = ?'); params.push(updates.dailyQuotaLimit); }
+    if (updates.rateLimitPerMinute !== undefined) { fields.push('rate_limit_per_minute = ?'); params.push(updates.rateLimitPerMinute); }
+    if (updates.fallbackAccountId !== undefined) { fields.push('fallback_account_id = ?'); params.push(updates.fallbackAccountId); }
+    if (updates.isActive !== undefined) { fields.push('is_active = ?'); params.push(updates.isActive ? 1 : 0); }
+    if (updates.credentials !== undefined) { fields.push('credentials = ?'); params.push(updates.credentials); }
+
+    if (fields.length === 0) return;
+
+    fields.push("updated_at = datetime('now')");
+    params.push(id, tenantId);
+
+    const stmt = this.db.prepare(`
+      UPDATE email_accounts SET ${fields.join(', ')} WHERE id = ? AND tenant_id = ?
+    `);
+    stmt.run(...params);
+  }
+
+  public delete(id: string, tenantId: string): void {
+    const stmt = this.db.prepare('DELETE FROM email_accounts WHERE id = ? AND tenant_id = ?');
+    stmt.run(id, tenantId);
+  }
 }
