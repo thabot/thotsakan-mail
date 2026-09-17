@@ -1,7 +1,7 @@
-# 👺 Thotsakan Mail Engine (ทศกัณฐ์)
-
 <div align="center">
-  <h3>The 10-Headed Multi-Provider Transactional Email Dispatcher Microservice</h3>
+  <img src="docs/assets/logo.svg" alt="Thotsakan Mail Engine Logo" width="180" />
+  <h1>Thotsakan Mail Engine (ทศกัณฐ์)</h1>
+  <p><b>The 10-Headed Multi-Provider Transactional Email Dispatcher Microservice</b></p>
   <p>Ultra-lightweight (< 40 MB RAM), 5ms Response Time, Priority Queue, Smart Failover, and Inbound SMTP Relay built on Bun + Hono + SQLite WAL.</p>
 
   [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
