@@ -10,3 +10,8 @@ dist/
 .DS_Store
 
 tsconfig.tsbuildinfo
+
+# Sensitive Architecture & Brain Artifacts
+*plan*.md
+*PLAN*.md
+brain/

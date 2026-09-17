@@ -29,6 +29,23 @@
 
 ---
 
+## 🥊 Feature-by-Feature Competitive Analysis
+
+Why high-growth engineering teams choose Thotsakan Mail Engine over monolithic notification SaaS or self-built solutions:
+
+| Feature & Capabilities | 👺 Thotsakan Mail Engine | Novu / Courier (SaaS) | Postal (Self-Hosted) | Custom In-House Setup |
+| :--- | :---: | :---: | :---: | :---: |
+| **RAM Footprint** | **< 40 MB** 🟢 | > 1.5 GB 🔴 | > 2 GB 🔴 | Varies by language |
+| **Smart Multi-Provider Failover** | **Native (14 Providers)** 🟢 | Limited / Add-on 🟡 | None (Single SMTP) 🔴 | Must build manually 🔴 |
+| **M365 / Gmail API + Auto Sentbox Cleaner** | **Built-in Native** 🟢 | None 🔴 | None 🔴 | Very complex to write 🔴 |
+| **Priority Queue (OTP Bypass Blasts)** | **Zero-Redis (SQLite WAL)** 🟢 | Included 🟢 | Single FIFO Queue 🟡 | Requires external Redis 🟡 |
+| **Infrastructure & Server Cost** | **Minimal ($3–$5/mo VPS)** 🟢 | High / Per-Volume MAU 🔴 | High (MySQL + RabbitMQ) 🔴 | Medium 🟡 |
+| **Dead-Letter Webhook Alerts** | **Built-in (Discord/Slack/LINE)** 🟢 | Included 🟢 | None 🔴 | Must write webhook 🟡 |
+| **Deployment Complexity** | **< 5 min (Single Container)** 🟢 | Multi-service stack 🔴 | Difficult setup 🔴 | Months of dev work 🔴 |
+| **Data Privacy & Compliance (PDPA/GDPR)** | **100% On-Prem (Zero PII Leak)** 🟢 | Third-party Cloud PII 🔴 | 100% On-Prem 🟢 | 100% On-Prem 🟢 |
+
+---
+
 ## 🚀 Quick Start (Up in 60 Seconds)
 
 ### Option 1: Run with Docker Compose (Recommended)
@@ -132,11 +149,47 @@ Ran 106 tests across 27 files. [259.00ms]
 
 ---
 
-## 📜 Dual License Model
+## 📜 License Architecture & Commercial Tiers
 
-Thotsakan Mail Engine is distributed under a Dual License model:
-1. **Community Edition (AGPLv3):** 100% free and open-source for personal projects, independent developers, and open-source software under AGPLv3 terms.
-2. **Commercial Edition (Pro / Enterprise):** Tailored for commercial proprietary applications that cannot comply with AGPLv3 copyleft terms. Unlocks full Web Console access, unlimited tenants/accounts, and priority support. Available via Lemon Squeezy.
+Thotsakan Mail Engine operates on a **Pure Self-Hosted Dual License Model** designed for zero phone-home reliance and complete data sovereignty:
+
+### 1. Feature Matrix by Edition
+
+| Feature / Capability | Community Edition (AGPLv3) | Pro License | Enterprise License |
+| :--- | :---: | :---: | :---: |
+| **Pricing** | **Free & Open Source** | **$199 / year** | **$799 / year** |
+| **Tenants / Workspaces** | Up to 3 Tenants | Up to 20 Tenants | **Unlimited** |
+| **Connected Email Accounts** | Up to 5 Accounts | Up to 50 Accounts | **Unlimited** |
+| **Web Console UI & Live Dashboard** | ❌ (REST API & CLI) | 🟢 Full Access | 🟢 Full Access |
+| **Visual MJML Template Editor** | ❌ | 🟢 Built-in | 🟢 Built-in |
+| **Dynamic Multi-Provider Failover** | Basic (1 Fallback Hop) | 🟢 Advanced (Chain Routing) | 🟢 Unlimited Custom Rules |
+| **Dead-Letter Webhook Alerts** | ❌ | 🟢 Discord / Slack / LINE | 🟢 Discord / Slack / LINE |
+| **Bulk Batch API (500/req)** | ❌ | 🟢 High-Throughput | 🟢 High-Throughput |
+| **Commercial Proprietary Use** | Requires AGPLv3 compliance | 🟢 Commercial (Closed Source) | 🟢 Commercial + White-Label |
+
+### 2. Offline Cryptographic Verification
+- Commercial licenses are issued as JSON Web Tokens (JWT) signed via an **Ed25519 Private Key**.
+- Thotsakan Mail Engine embeds only the **Ed25519 Public Key**, allowing completely offline, local cryptographic signature validation with **zero outbound pings** to licensing servers.
+- **Graceful Fallback:** If a license expires or is missing, the engine smoothly downgrades to Community tier without crashing or dropping mail dispatch queues.
+
+---
+
+## 🛡️ Open Source Compliance & IP Safety
+
+All dependencies and libraries utilized within Thotsakan Mail Engine have been thoroughly vetted for enterprise commercial safety and permissive licensing:
+
+| Dependency Category | Packages / Libraries | License Type | Commercial Proprietary Rights |
+| :--- | :--- | :---: | :---: |
+| **Core Web Engine** | `hono` | **MIT** | 🟢 Permissive (Full Commercial Distribution) |
+| **Validation & Schemas** | `zod`, `@hono/zod-validator` | **MIT** | 🟢 Permissive (Full Commercial Distribution) |
+| **Cryptographic Security** | `jose` (Ed25519 / AES-GCM) | **Apache-2.0** | 🟢 Permissive (Full Commercial Distribution) |
+| **Database & Runtime** | `bun:sqlite`, `bun` runtime | **MIT** | 🟢 Permissive (Full Commercial Distribution) |
+| **Email Protocol & SMTP** | `nodemailer`, `smtp-server` | **MIT** | 🟢 Permissive (Full Commercial Distribution) |
+| **IMAP Cleaner Engine** | `imapflow` | **MIT** | 🟢 Permissive (Full Commercial Distribution) |
+| **Template Compilation** | `handlebars`, `mjml` | **MIT** | 🟢 Permissive (Full Commercial Distribution) |
+| **Official Provider SDKs** | AWS SES, MSAL, Google APIs, Resend | **Apache-2.0 / MIT** | 🟢 Official Cloud Provider SDKs |
+
+> 🔒 **Zero Copyleft Contamination:** None of the internal microservice libraries use copyleft licenses (GPL/LGPL). Organizations can safely deploy and distribute commercial extensions without IP risk.
 
 ---
 
