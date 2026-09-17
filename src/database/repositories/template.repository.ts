@@ -33,4 +33,14 @@ export class TemplateRepository {
     const stmt = this.db.prepare('SELECT * FROM email_templates WHERE tenant_id = ? AND code = ?');
     return stmt.get(tenantId, code);
   }
+
+  public listByTenant(tenantId: string): any[] {
+    const stmt = this.db.prepare('SELECT * FROM email_templates WHERE tenant_id = ? ORDER BY created_at DESC');
+    return stmt.all(tenantId);
+  }
+
+  public delete(tenantId: string, code: string): void {
+    const stmt = this.db.prepare('DELETE FROM email_templates WHERE tenant_id = ? AND code = ?');
+    stmt.run(tenantId, code);
+  }
 }
