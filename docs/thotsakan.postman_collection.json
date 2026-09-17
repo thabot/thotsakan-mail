@@ -1,0 +1,221 @@
+{
+  "info": {
+    "name": "Thotsakan Mail Engine - Complete Control API",
+    "_postman_id": "c71a3648-93bd-47a5-9773-10headedmail01",
+    "description": "Comprehensive Postman collection covering all Headless Control APIs and Dispatch endpoints for Thotsakan Mail Engine (ทศกัณฐ์)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "value", "value": "{{apiKey}}", "type": "string" },
+      { "key": "key", "value": "X-API-Key", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "apiKey", "value": "thk_live_demo_key" }
+  ],
+  "item": [
+    {
+      "name": "1. Email Dispatch",
+      "item": [
+        {
+          "name": "Send Single Email (Async Queue)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"recipient@example.com\",\n  \"subject\": \"Welcome to Thotsakan!\",\n  \"html\": \"<h1>Hello from Thotsakan</h1><p>Transactional Dispatcher Active.</p>\",\n  \"priority\": \"normal\",\n  \"async\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/emails/send", "host": ["{{baseUrl}}"], "path": ["v1", "emails", "send"] }
+          }
+        },
+        {
+          "name": "Send Single Email (Sync OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"otp-user@example.com\",\n  \"subject\": \"Your Verification Code: 982103\",\n  \"html\": \"<p>Code: <b>982103</b></p>\",\n  \"priority\": \"high\",\n  \"async\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/emails/send", "host": ["{{baseUrl}}"], "path": ["v1", "emails", "send"] }
+          }
+        },
+        {
+          "name": "Batch Send (Up to 500 emails)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emails\": [\n    { \"to\": \"user1@example.com\", \"subject\": \"Monthly Report\", \"html\": \"<p>User 1 Report</p>\" },\n    { \"to\": \"user2@example.com\", \"subject\": \"Monthly Report\", \"html\": \"<p>User 2 Report</p>\" }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/emails/batch", "host": ["{{baseUrl}}"], "path": ["v1", "emails", "batch"] }
+          }
+        },
+        {
+          "name": "Get Email Status",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/emails/status/job_1742440000_abc", "host": ["{{baseUrl}}"], "path": ["v1", "emails", "status", "job_1742440000_abc"] }
+          }
+        },
+        {
+          "name": "List Email Dispatch Logs",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/emails/logs?limit=20", "host": ["{{baseUrl}}"], "path": ["v1", "emails", "logs"], "query": [{ "key": "limit", "value": "20" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Outbound Accounts Management",
+      "item": [
+        {
+          "name": "List Outbound Accounts",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/accounts", "host": ["{{baseUrl}}"], "path": ["v1", "accounts"] }
+          }
+        },
+        {
+          "name": "Register AWS SES Account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AWS SES Primary\",\n  \"providerType\": \"aws-ses\",\n  \"fromEmail\": \"noreply@yourdomain.com\",\n  \"dailyQuotaLimit\": 50000,\n  \"rateLimitPerMinute\": 300,\n  \"credentials\": {\n    \"accessKeyId\": \"AKIAIOSFODNN7EXAMPLE\",\n    \"secretAccessKey\": \"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\",\n    \"region\": \"ap-southeast-1\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/accounts", "host": ["{{baseUrl}}"], "path": ["v1", "accounts"] }
+          }
+        },
+        {
+          "name": "Test Account Connection",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/v1/accounts/acc_demo/test", "host": ["{{baseUrl}}"], "path": ["v1", "accounts", "acc_demo", "test"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Routing Rules",
+      "item": [
+        {
+          "name": "List Routing Rules",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/rules", "host": ["{{baseUrl}}"], "path": ["v1", "rules"] }
+          }
+        },
+        {
+          "name": "Create Domain Match Rule",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": 10,\n  \"conditionType\": \"domain_match\",\n  \"conditionValue\": \"gmail.com\",\n  \"targetAccountId\": \"acc_gmail_demo\",\n  \"isActive\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/rules", "host": ["{{baseUrl}}"], "path": ["v1", "rules"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Suppression List",
+      "item": [
+        {
+          "name": "List Suppressed Emails",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/suppression", "host": ["{{baseUrl}}"], "path": ["v1", "suppression"] }
+          }
+        },
+        {
+          "name": "Check Single Email Suppression",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/suppression/check/spammer@example.com", "host": ["{{baseUrl}}"], "path": ["v1", "suppression", "check", "spammer@example.com"] }
+          }
+        },
+        {
+          "name": "Add Suppressed Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bounced@example.com\",\n  \"reason\": \"BOUNCE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/suppression", "host": ["{{baseUrl}}"], "path": ["v1", "suppression"] }
+          }
+        },
+        {
+          "name": "Unsuppress Email",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/v1/suppression/bounced@example.com", "host": ["{{baseUrl}}"], "path": ["v1", "suppression", "bounced@example.com"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Queue & Maintenance Controls",
+      "item": [
+        {
+          "name": "Retry All Failed Jobs",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/v1/queue/retry-failed", "host": ["{{baseUrl}}"], "path": ["v1", "queue", "retry-failed"] }
+          }
+        },
+        {
+          "name": "Purge Dead-Letter Jobs",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/v1/queue/purge-dead", "host": ["{{baseUrl}}"], "path": ["v1", "queue", "purge-dead"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Observability & DevOps",
+      "item": [
+        {
+          "name": "Metrics Overview",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/v1/metrics/overview", "host": ["{{baseUrl}}"], "path": ["v1", "metrics", "overview"] }
+          }
+        },
+        {
+          "name": "Health Status (/healthz)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/healthz", "host": ["{{baseUrl}}"], "path": ["healthz"] }
+          }
+        },
+        {
+          "name": "Prometheus Metrics (/metrics/prometheus)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/metrics/prometheus", "host": ["{{baseUrl}}"], "path": ["metrics", "prometheus"] }
+          }
+        },
+        {
+          "name": "OpenAPI Spec (/openapi.json)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/openapi.json", "host": ["{{baseUrl}}"], "path": ["openapi.json"] }
+          }
+        }
+      ]
+    }
+  ]
+}

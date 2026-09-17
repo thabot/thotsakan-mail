@@ -1,10 +1,12 @@
 services:
   thotsakan-mail:
+    image: ghcr.io/thabot/thotsakan-mail:latest
     build: .
     container_name: thotsakan-mail-engine
     restart: unless-stopped
     ports:
       - "3000:3000"
+      - "2525:2525"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -14,7 +16,7 @@ services:
     volumes:
       - thotsakan_data:/app/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/healthz | grep -q healthy || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/healthz || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

@@ -269,4 +269,58 @@ curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipien
 curl http://localhost:3000/metrics/prometheus
 ```
 
+---
+
+## 7. Headless Control API (Complete Programmatic Management)
+
+Every function available in the Web UI is 100% controllable programmatically via REST API:
+
+### 7.1 Test Provider Connection (`POST /v1/accounts/:id/test`)
+```bash
+curl -X POST http://localhost:3000/v1/accounts/acc_1742440000_abc/test \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+### 7.2 Update Routing Rule (`PUT /v1/rules/:id`)
+```bash
+curl -X PUT http://localhost:3000/v1/rules/rule_1742440000_xyz \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "priority": 20,
+    "isActive": true
+  }'
+```
+
+### 7.3 Check Single Email Suppression (`GET /v1/suppression/check/:email`)
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/suppression/check/customer@example.com
+```
+
+### 7.4 Re-queue All Failed Jobs (`POST /v1/queue/retry-failed`)
+```bash
+curl -X POST http://localhost:3000/v1/queue/retry-failed \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+### 7.5 Purge Dead-Letter Queue (`POST /v1/queue/purge-dead`)
+```bash
+curl -X POST http://localhost:3000/v1/queue/purge-dead \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+---
+
+## 8. Run with Docker from GitHub Container Registry (GHCR)
+
+Run Thotsakan Mail Engine instantly with one command:
+```bash
+docker run -d --name thotsakan \
+  -p 3000:3000 \
+  -p 2525:2525 \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/thabot/thotsakan-mail:latest
+```
+Access the Web Management Console at `http://localhost:3000` and interactive Swagger docs at `http://localhost:3000/docs`.
+
 

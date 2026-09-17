@@ -6,9 +6,10 @@
 
   [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
   [![Commercial License: Available](https://img.shields.io/badge/Commercial%20License-Lemon%20Squeezy-purple.svg)](#dual-license-model)
+  [![Docker: GHCR](https://img.shields.io/badge/Docker-ghcr.io-blue.svg?logo=docker)](https://github.com/thabot/thotsakan-mail/pkgs/container/thotsakan-mail)
   [![Runtime: Bun](https://img.shields.io/badge/Runtime-Bun%201.4+-f472b6.svg)](https://bun.sh)
   [![Framework: Hono](https://img.shields.io/badge/Framework-Hono%20v4-e11d48.svg)](https://hono.dev)
-  [![Tests: 100% Passed](https://img.shields.io/badge/Tests-106%20Passed-emerald.svg)](#testing)
+  [![Tests: 100% Passed](https://img.shields.io/badge/Tests-119%20Passed-emerald.svg)](#testing)
 </div>
 
 ---
@@ -48,13 +49,22 @@ Why high-growth engineering teams choose Thotsakan Mail Engine over monolithic n
 
 ## 🚀 Quick Start (Up in 60 Seconds)
 
-### Option 1: Run with Docker Compose (Recommended)
+### Option 1: One-Liner Docker Run (Production Ready)
+```bash
+docker run -d --name thotsakan \
+  -p 3000:3000 \
+  -p 2525:2525 \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/thabot/thotsakan-mail:latest
+```
+Access the **Web Console** at `http://localhost:3000` and **Interactive Swagger API Docs** at `http://localhost:3000/docs`.
+
+### Option 2: Run with Docker Compose
 ```bash
 docker compose up -d
 ```
-Open your browser and navigate to `http://localhost:3000/console` to access the Web Console.
 
-### Option 2: Run with Bun Directly
+### Option 3: Run with Bun Directly
 ```bash
 # 1. Clone repository
 git clone https://github.com/thabot/thotsakan-mail.git

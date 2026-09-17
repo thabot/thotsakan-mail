@@ -21,4 +21,10 @@ export class ApiKeyRepository {
     const res: any = stmt.get();
     return res ? res.count : 0;
   }
+
+  public countTotalKeys(): number {
+    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM tenant_api_keys');
+    const res: any = stmt.get();
+    return res ? res.count : 0;
+  }
 }

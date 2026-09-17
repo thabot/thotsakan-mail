@@ -28,6 +28,10 @@ export class SuppressionService {
     this.suppressionRepo.remove(email, tenantId);
   }
 
+  public isSuppressed(email: string, tenantId: string): boolean {
+    return this.suppressionRepo.isSuppressed(email, tenantId);
+  }
+
   public list(tenantId: string, limit?: number): any[] {
     return this.suppressionRepo.list(tenantId, limit);
   }

@@ -192,5 +192,33 @@ export class EmailLogRepository {
     `);
     stmt.run(jobId);
   }
+
+  public retryFailedJobs(tenantId?: string): number {
+    let sql = `
+      UPDATE email_logs
+      SET status = 'PENDING', attempts = 0, scheduled_at = datetime('now')
+      WHERE status = 'FAILED'
+    `;
+    const params: any[] = [];
+    if (tenantId) {
+      sql += ' AND tenant_id = ?';
+      params.push(tenantId);
+    }
+    const stmt = this.db.prepare(sql);
+    const result = stmt.run(...params);
+    return result.changes;
+  }
+
+  public purgeDeadJobs(tenantId?: string): number {
+    let sql = "DELETE FROM email_logs WHERE status = 'FAILED'";
+    const params: any[] = [];
+    if (tenantId) {
+      sql += ' AND tenant_id = ?';
+      params.push(tenantId);
+    }
+    const stmt = this.db.prepare(sql);
+    const result = stmt.run(...params);
+    return result.changes;
+  }
 }
 

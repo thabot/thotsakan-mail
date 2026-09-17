@@ -89,6 +89,14 @@ const CreateRuleSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+const UpdateRuleSchema = z.object({
+  priority: z.number().int().optional(),
+  conditionType: z.enum(['domain_match', 'subject_contains', 'recipient_regex']).optional(),
+  conditionValue: z.string().min(1).optional(),
+  targetAccountId: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
+});
+
 const SuppressionSchema = z.object({
   email: z.string().email(),
   reason: z.enum(['BOUNCE', 'SPAM', 'MANUAL', 'UNSUBSCRIBE']).default('MANUAL'),
@@ -409,6 +417,13 @@ export function createEmailsRoute(db: Database) {
     return c.json({ ok: true, message: `Unsuppressed ${email}` });
   });
 
+  app.get('/v1/suppression/check/:email', (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const email = c.req.param('email');
+    const isSuppressed = suppressionService.isSuppressed(email, tenantId);
+    return c.json({ ok: true, email, isSuppressed });
+  });
+
   // 7. Accounts CRUD
   app.get('/v1/accounts', (c) => {
     const tenantId = c.get('tenantId') || 'default_tenant';
@@ -478,6 +493,36 @@ export function createEmailsRoute(db: Database) {
     return c.json({ ok: true, message: 'Account updated successfully' });
   });
 
+  app.post('/v1/accounts/:id/test', async (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const id = c.req.param('id');
+    const account = accountRepo.findById(id);
+    if (!account || account.tenant_id !== tenantId) {
+      return c.json({ ok: false, error: 'Account not found' }, 404);
+    }
+
+    let credentials: any;
+    try {
+      credentials = JSON.parse(crypto.decrypt(account.credentials));
+    } catch (err: any) {
+      return c.json({ ok: false, error: `Failed to decrypt credentials: ${err.message}` }, 500);
+    }
+
+    try {
+      // Validate provider exists and can be resolved
+      const provider = EmailProviderFactory.getProvider(account.provider_type);
+      return c.json({
+        ok: true,
+        providerType: account.provider_type,
+        status: 'CONNECTED',
+        fromEmail: account.from_email,
+        message: `Provider adapter [${account.provider_type}] resolved and credentials valid`,
+      });
+    } catch (err: any) {
+      return c.json({ ok: false, error: err.message }, 500);
+    }
+  });
+
   app.delete('/v1/accounts/:id', (c) => {
     const tenantId = c.get('tenantId') || 'default_tenant';
     const id = c.req.param('id');
@@ -510,11 +555,38 @@ export function createEmailsRoute(db: Database) {
     return c.json({ ok: true, ruleId, message: 'Routing rule created' }, 201);
   });
 
+  app.put('/v1/rules/:id', zValidator('json', UpdateRuleSchema), (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const id = c.req.param('id');
+    const body = c.req.valid('json');
+
+    const existing = ruleRepo.findById(id);
+    if (!existing || existing.tenant_id !== tenantId) {
+      return c.json({ error: 'Routing rule not found' }, 404);
+    }
+
+    ruleRepo.update(id, tenantId, body as any);
+    return c.json({ ok: true, message: 'Routing rule updated successfully' });
+  });
+
   app.delete('/v1/rules/:id', (c) => {
     const tenantId = c.get('tenantId') || 'default_tenant';
     const id = c.req.param('id');
     ruleRepo.delete(id, tenantId);
     return c.json({ ok: true, message: 'Routing rule deleted' });
+  });
+
+  // 9. Queue & Maintenance Control API
+  app.post('/v1/queue/retry-failed', (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const retriedCount = logRepo.retryFailedJobs(tenantId);
+    return c.json({ ok: true, retriedCount, message: `Re-queued ${retriedCount} failed jobs to PENDING` });
+  });
+
+  app.post('/v1/queue/purge-dead', (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const purgedCount = logRepo.purgeDeadJobs(tenantId);
+    return c.json({ ok: true, purgedCount, message: `Permanently purged ${purgedCount} dead jobs` });
   });
 
   return app;

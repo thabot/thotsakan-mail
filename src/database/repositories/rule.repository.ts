@@ -57,6 +57,37 @@ export class RoutingRuleRepository {
     return stmt.all(tenantId) as RoutingRuleRecord[];
   }
 
+  public update(id: string, tenantId: string, updates: Partial<{ priority: number; conditionType: string; conditionValue: string; targetAccountId: string; isActive: boolean }>): void {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.priority !== undefined) {
+      fields.push('priority = ?');
+      values.push(updates.priority);
+    }
+    if (updates.conditionType !== undefined) {
+      fields.push('condition_type = ?');
+      values.push(updates.conditionType);
+    }
+    if (updates.conditionValue !== undefined) {
+      fields.push('condition_value = ?');
+      values.push(updates.conditionValue);
+    }
+    if (updates.targetAccountId !== undefined) {
+      fields.push('target_account_id = ?');
+      values.push(updates.targetAccountId);
+    }
+    if (updates.isActive !== undefined) {
+      fields.push('is_active = ?');
+      values.push(updates.isActive ? 1 : 0);
+    }
+
+    if (fields.length === 0) return;
+    values.push(id, tenantId);
+    const stmt = this.db.prepare(`UPDATE routing_rules SET ${fields.join(', ')} WHERE id = ? AND tenant_id = ?`);
+    stmt.run(...values);
+  }
+
   public delete(id: string, tenantId: string): void {
     const stmt = this.db.prepare('DELETE FROM routing_rules WHERE id = ? AND tenant_id = ?');
     stmt.run(id, tenantId);

@@ -268,4 +268,56 @@ curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipien
 curl http://localhost:3000/metrics/prometheus
 ```
 
+---
 
+## 7. Headless Control API (คู่มือควบคุม Engine ครบ 100%)
+
+ทุกฟังก์ชันที่ทำได้บนหน้า Web UI สามารถสั่งการแบบอัตโนมัติผ่าน REST API ได้ 100%:
+
+### 7.1 ทดสอบการเชื่อมต่อบัญชีผู้ส่ง (`POST /v1/accounts/:id/test`)
+```bash
+curl -X POST http://localhost:3000/v1/accounts/acc_1742440000_abc/test \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+### 7.2 แก้ไขกฎ Dynamic Routing (`PUT /v1/rules/:id`)
+```bash
+curl -X PUT http://localhost:3000/v1/rules/rule_1742440000_xyz \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "priority": 20,
+    "isActive": true
+  }'
+```
+
+### 7.3 ตรวจสอบสถานะการบล็อกอีเมลเดี่ยว (`GET /v1/suppression/check/:email`)
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/suppression/check/customer@example.com
+```
+
+### 7.4 สั่ง Re-queue อีเมลที่ล้มเหลวเพื่อส่งใหม่ทั้งหมด (`POST /v1/queue/retry-failed`)
+```bash
+curl -X POST http://localhost:3000/v1/queue/retry-failed \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+### 7.5 สั่งล้างคิวอีเมลที่ตายถาวร (`POST /v1/queue/purge-dead`)
+```bash
+curl -X POST http://localhost:3000/v1/queue/purge-dead \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+---
+
+## 8. การรันด้วย Docker Image จาก GitHub Container Registry (GHCR)
+
+สามารถรัน Thotsakan ได้ทันทีด้วยคำสั่งบรรทัดเดียว:
+```bash
+docker run -d --name thotsakan \
+  -p 3000:3000 \
+  -p 2525:2525 \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/thabot/thotsakan-mail:latest
+```
+เมื่อรันเสร็จ เปิดหน้าเว็บคอนโซลได้ที่ `http://localhost:3000` และเปิดดูเอกสาร Interactive Swagger ได้ที่ `http://localhost:3000/docs`

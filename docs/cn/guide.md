@@ -267,4 +267,57 @@ curl -H "X-API-Key: 您的API密钥" "http://localhost:3000/v1/emails/logs?recip
 curl http://localhost:3000/metrics/prometheus
 ```
 
+---
+
+## 7. 无头控制 API (Headless Control API - 完整程序化管理)
+
+Web 控制台上的所有功能均可通过 REST API 100% 程序化调用控制：
+
+### 7.1 测试发信通道连通性 (`POST /v1/accounts/:id/test`)
+```bash
+curl -X POST http://localhost:3000/v1/accounts/acc_1742440000_abc/test \
+  -H "X-API-Key: 您的API密钥"
+```
+
+### 7.2 更新路由规则 (`PUT /v1/rules/:id`)
+```bash
+curl -X PUT http://localhost:3000/v1/rules/rule_1742440000_xyz \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "priority": 20,
+    "isActive": true
+  }'
+```
+
+### 7.3 单邮箱抑制状态查询 (`GET /v1/suppression/check/:email`)
+```bash
+curl -H "X-API-Key: 您的API密钥" http://localhost:3000/v1/suppression/check/customer@example.com
+```
+
+### 7.4 重试所有失败任务 (`POST /v1/queue/retry-failed`)
+```bash
+curl -X POST http://localhost:3000/v1/queue/retry-failed \
+  -H "X-API-Key: 您的API密钥"
+```
+
+### 7.5 清理死信任务 (`POST /v1/queue/purge-dead`)
+```bash
+curl -X POST http://localhost:3000/v1/queue/purge-dead \
+  -H "X-API-Key: 您的API密钥"
+```
+
+---
+
+## 8. 通过 GitHub Container Registry (GHCR) 一键启动
+
+使用单行命令在 VPS 或本地立即运行 Thotsakan：
+```bash
+docker run -d --name thotsakan \
+  -p 3000:3000 \
+  -p 2525:2525 \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/thabot/thotsakan-mail:latest
+```
+运行后访问 Web 控制台：`http://localhost:3000`，访问交互式 Swagger 文档：`http://localhost:3000/docs`。
 
