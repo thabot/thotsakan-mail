@@ -1,0 +1,72 @@
+name: Automated Release & Tagging
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  release:
+    # Run only if the pull request was merged successfully
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun Runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Extract Version from package.json
+        id: version
+        run: |
+          VERSION=$(bun -e 'console.log(require("./package.json").version)')
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+          echo "raw_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if Tag Already Exists
+        id: check_tag
+        run: |
+          if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.version.outputs.version }} already exists. Skipping release creation."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Git Tag & GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "Release ${{ steps.version.outputs.version }}"
+          body: |
+            ## 🚀 What's Changed
+            - Merged Pull Request: #${{ github.event.pull_request.number }} (${{ github.event.pull_request.title }})
+            - Target Branch: `main`
+            
+            ### 🐳 Multi-Arch Docker Container:
+            ```bash
+            docker run -d --name thotsakan \
+              -p 3000:3000 \
+              -p 2525:2525 \
+              -v $(pwd)/data:/app/data \
+              ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+            ```
+            
+            **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
