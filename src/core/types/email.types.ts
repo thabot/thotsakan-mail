@@ -29,6 +29,7 @@ export interface EmailMessage {
   text?: string;
   html?: string;
   templateId?: string;
+  templateCode?: string;
   templateData?: Record<string, any>;
   attachments?: EmailAttachment[];
   headers?: Record<string, string>;

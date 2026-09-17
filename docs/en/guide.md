@@ -74,3 +74,94 @@ curl -X POST http://localhost:3000/v1/emails/send \
     "async": false
   }'
 ```
+
+### 3.3 Bulk Batch Dispatch (Up to 500 emails)
+```bash
+curl -X POST http://localhost:3000/v1/emails/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "emails": [
+      { "to": "user1@domain.com", "subject": "Notice #1", "html": "<p>Content 1</p>" },
+      { "to": "user2@domain.com", "subject": "Notice #2", "html": "<p>Content 2</p>" }
+    ]
+  }'
+```
+
+### 3.4 Dispatch with Template & Dynamic Variables
+```bash
+curl -X POST http://localhost:3000/v1/emails/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "to": "customer@example.com",
+    "templateCode": "invoice_receipt",
+    "templateData": {
+      "customer": "Sarah Connor",
+      "invoiceId": "INV-5502",
+      "amount": 299.00
+    },
+    "priority": "normal",
+    "async": true
+  }'
+```
+
+---
+
+## 4. Email Template Management (CRUD & MJML Engine)
+
+### 4.1 Create Template (`POST /v1/templates`)
+```bash
+curl -X POST http://localhost:3000/v1/templates \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "code": "invoice_receipt",
+    "name": "Invoice Template",
+    "subjectTemplate": "Invoice #{{invoiceId}} for {{customer}}",
+    "htmlContent": "<h1>Hello {{customer}}</h1><p>Amount due: <b>${{amount}}</b></p>",
+    "mjmlContent": "<mjml><mj-body><mj-section><mj-column><mj-text>Hello {{customer}}</mj-text></mj-column></mj-section></mj-body></mjml>"
+  }'
+```
+
+### 4.2 List or Retrieve Template (`GET /v1/templates`)
+```bash
+# List all templates
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates
+
+# Retrieve single template
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates/invoice_receipt
+```
+
+### 4.3 Update Template (`PUT /v1/templates/:code`)
+```bash
+curl -X PUT http://localhost:3000/v1/templates/invoice_receipt \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Updated Invoice Template",
+    "subjectTemplate": "Official Invoice #{{invoiceId}} for {{customer}}",
+    "htmlContent": "<h1>Invoice #{{invoiceId}}</h1><p>Total amount: ${{amount}}</p>"
+  }'
+```
+
+### 4.4 Render Template Preview (`POST /v1/templates/:code/preview`)
+```bash
+curl -X POST http://localhost:3000/v1/templates/invoice_receipt/preview \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "data": {
+      "customer": "Sarah Connor",
+      "invoiceId": "INV-5502",
+      "amount": 299.00
+    }
+  }'
+```
+
+### 4.5 Delete Template (`DELETE /v1/templates/:code`)
+```bash
+curl -X DELETE http://localhost:3000/v1/templates/invoice_receipt \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+

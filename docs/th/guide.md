@@ -87,3 +87,80 @@ curl -X POST http://localhost:3000/v1/emails/batch \
     ]
   }'
 ```
+
+### 3.4 ส่งอีเมลโดยระบุ Template (Dynamic Variables)
+ส่งอีเมลโดยระบุรหัสเทมเพลต `templateCode` และตัวแปรใน `templateData`:
+```bash
+curl -X POST http://localhost:3000/v1/emails/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "to": "somchai@example.com",
+    "templateCode": "welcome_member",
+    "templateData": {
+      "name": "คุณสมชาย",
+      "verifyUrl": "https://example.com/verify?token=xyz123"
+    },
+    "priority": "normal",
+    "async": true
+  }'
+```
+
+---
+
+## 4. ระบบจัดการ Email Template (CRUD & MJML)
+
+### 4.1 สร้าง Template ใหม่ (`POST /v1/templates`)
+```bash
+curl -X POST http://localhost:3000/v1/templates \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "code": "welcome_member",
+    "name": "เทมเพลตต้อนรับสมาชิกใหม่",
+    "subjectTemplate": "ยินดีต้อนรับคุณ {{name}} สู่ระบบ",
+    "htmlContent": "<h1>สวัสดีครับ {{name}}</h1><p>กรุณากดยืนยันตัวตน: <a href=\"{{verifyUrl}}\">คลิกที่นี่</a></p>",
+    "mjmlContent": "<mjml><mj-body><mj-section><mj-column><mj-text>สวัสดี {{name}}</mj-text></mj-column></mj-section></mj-body></mjml>"
+  }'
+```
+
+### 4.2 เรียกดูรายการ Template ทั้งหมดหรือรายตัว (`GET /v1/templates`)
+```bash
+# รายการทั้งหมด
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates
+
+# รายการเฉพาะรหัส
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates/welcome_member
+```
+
+### 4.3 แก้ไข Template (`PUT /v1/templates/:code`)
+```bash
+curl -X PUT http://localhost:3000/v1/templates/welcome_member \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "เทมเพลตต้อนรับสมาชิก (ปรับปรุงข้อความ)",
+    "subjectTemplate": "ยินดีต้อนรับคุณ {{name}} สู่ครอบครัวของเรา",
+    "htmlContent": "<h1>ยินดีต้อนรับ {{name}}!</h1><p>ลิงก์ยืนยัน: <a href=\"{{verifyUrl}}\">ยืนยันอีเมล</a></p>"
+  }'
+```
+
+### 4.4 ทดสอบเรนเดอร์ Template (Preview Data)
+```bash
+curl -X POST http://localhost:3000/v1/templates/welcome_member/preview \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "data": {
+      "name": "สมชาย",
+      "verifyUrl": "https://example.com/verify?token=12345"
+    }
+  }'
+```
+
+### 4.5 ลบ Template (`DELETE /v1/templates/:code`)
+```bash
+curl -X DELETE http://localhost:3000/v1/templates/welcome_member \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+

@@ -21,6 +21,14 @@ const CreateTemplateSchema = z.object({
   textContent: z.string().optional(),
 });
 
+const UpdateTemplateSchema = z.object({
+  name: z.string().min(1).optional(),
+  subjectTemplate: z.string().min(1).optional(),
+  htmlContent: z.string().min(1).optional(),
+  mjmlContent: z.string().optional(),
+  textContent: z.string().optional(),
+});
+
 const RenderTemplateSchema = z.object({
   data: z.record(z.any()).default({}),
 });
@@ -71,7 +79,20 @@ export function createTemplatesRoute(db: Database) {
     }
   });
 
-  // 4. POST /v1/templates/:code/preview - render preview with mock data
+  // 4. PUT /v1/templates/:code - update existing template
+  app.put('/v1/templates/:code', zValidator('json', UpdateTemplateSchema), (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const code = c.req.param('code');
+    const body = c.req.valid('json');
+
+    const updated = repo.update(tenantId, code, body);
+    if (!updated) {
+      return c.json({ error: 'Template not found' }, 404);
+    }
+    return c.json({ ok: true, message: `Template ${code} updated successfully` });
+  });
+
+  // 5. POST /v1/templates/:code/preview - render preview with mock data
   app.post('/v1/templates/:code/preview', zValidator('json', RenderTemplateSchema), (c) => {
     const tenantId = c.get('tenantId') || 'default_tenant';
     const code = c.req.param('code');
@@ -85,7 +106,7 @@ export function createTemplatesRoute(db: Database) {
     return c.json({ ok: true, ...rendered });
   });
 
-  // 5. DELETE /v1/templates/:code - delete template
+  // 6. DELETE /v1/templates/:code - delete template
   app.delete('/v1/templates/:code', (c) => {
     const tenantId = c.get('tenantId') || 'default_tenant';
     const code = c.req.param('code');

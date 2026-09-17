@@ -13,6 +13,7 @@ import { CryptoService } from '../../services/crypto.service.js';
 import { EmailProviderFactory } from '../../providers/factory.js';
 import { SentboxCleanerService } from '../../services/sentbox-cleaner.service.js';
 import { AttachmentGuardService } from '../../services/attachment-guard.service.js';
+import { TemplateEngineService } from '../../services/template-engine.service.js';
 import { getEnv } from '../../config/env.js';
 import type { EmailMessage, EmailPriority } from '../../core/types/email.types.js';
 
@@ -38,10 +39,11 @@ const SendEmailSchema = z.object({
   bcc: z.union([z.string().email(), z.array(z.string().email())]).optional(),
   from: z.string().optional(),
   replyTo: z.string().email().optional(),
-  subject: z.string().min(1),
+  subject: z.string().optional(),
   text: z.string().optional(),
   html: z.string().optional(),
   templateId: z.string().optional(),
+  templateCode: z.string().optional(),
   templateData: z.record(z.any()).optional(),
   attachments: z.array(AttachmentSchema).optional(),
   headers: z.record(z.string()).optional(),
@@ -91,12 +93,28 @@ export function createEmailsRoute(db: Database) {
   const rateLimitService = new RateLimitService(db);
   const failoverService = new FailoverService(db);
   const sentboxCleaner = new SentboxCleanerService();
+  const templateEngine = new TemplateEngineService(db);
   const crypto = new CryptoService(getEnv().ENCRYPTION_KEY);
 
   // 1. POST /v1/emails/send
   app.post('/v1/emails/send', zValidator('json', SendEmailSchema), async (c) => {
     const tenantId = c.get('tenantId') || 'default_tenant';
     const body = c.req.valid('json');
+
+    // Resolve template if templateCode or templateId provided
+    const tplCode = body.templateCode || body.templateId;
+    if (tplCode) {
+      const rendered = templateEngine.renderByCode(tenantId, tplCode, body.templateData || {});
+      if (rendered) {
+        if (!body.subject && rendered.subject) body.subject = rendered.subject;
+        if (!body.html && rendered.html) body.html = rendered.html;
+        if (!body.text && rendered.text) body.text = rendered.text;
+      }
+    }
+
+    if (!body.subject) {
+      body.subject = '(No Subject)';
+    }
 
     const recipients = Array.isArray(body.to) ? body.to : [body.to];
 
@@ -279,6 +297,20 @@ export function createEmailsRoute(db: Database) {
       for (const item of items) {
         const recipients = Array.isArray(item.to) ? item.to : [item.to];
         const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+        const tplCode = item.templateCode || item.templateId;
+        if (tplCode) {
+          const rendered = templateEngine.renderByCode(tenantId, tplCode, item.templateData || {});
+          if (rendered) {
+            if (!item.subject && rendered.subject) item.subject = rendered.subject;
+            if (!item.html && rendered.html) item.html = rendered.html;
+            if (!item.text && rendered.text) item.text = rendered.text;
+          }
+        }
+
+        if (!item.subject) {
+          item.subject = '(No Subject)';
+        }
 
         let targetAccountId = item.accountId;
         if (!targetAccountId) {

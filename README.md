@@ -115,6 +115,90 @@ curl -X POST http://localhost:3000/v1/emails/batch \
   }'
 ```
 
+### 4. Dispatch Email with Dynamic Template
+Send personalized emails by specifying `templateCode` and dynamic variables in `templateData`:
+```bash
+curl -X POST http://localhost:3000/v1/emails/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "to": "alice@example.com",
+    "templateCode": "order_receipt",
+    "templateData": {
+      "customerName": "Alice",
+      "orderId": "ORD-9821",
+      "totalAmount": 149.50,
+      "items": [
+        { "name": "Cloud Subscription", "qty": 1, "price": 99.50 },
+        { "name": "Dedicated IP", "qty": 1, "price": 50.00 }
+      ]
+    },
+    "priority": "high",
+    "async": true
+  }'
+```
+
+---
+
+## 🎨 Template Management (CRUD & MJML Engine)
+
+Thotsakan includes a responsive template engine supporting Handlebars variable interpolation, loops, conditional blocks, and MJML markup:
+
+### 1. Create a Template (`POST /v1/templates`)
+```bash
+curl -X POST http://localhost:3000/v1/templates \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "code": "order_receipt",
+    "name": "Order Receipt Template",
+    "subjectTemplate": "Order #{{orderId}} Confirmed for {{customerName}}",
+    "htmlContent": "<h1>Thank you {{customerName}}!</h1><p>Total: <b>${{totalAmount}}</b></p>",
+    "mjmlContent": "<mjml><mj-body><mj-section><mj-column><mj-text>Thank you {{customerName}}!</mj-text></mj-column></mj-section></mj-body></mjml>"
+  }'
+```
+
+### 2. Get / List Templates (`GET /v1/templates`)
+```bash
+# List all templates
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates
+
+# Get single template by code
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates/order_receipt
+```
+
+### 3. Update a Template (`PUT /v1/templates/:code`)
+```bash
+curl -X PUT http://localhost:3000/v1/templates/order_receipt \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Updated Order Receipt",
+    "subjectTemplate": "Official Receipt: Order #{{orderId}}",
+    "htmlContent": "<h1>Hello {{customerName}}</h1><p>Your order #{{orderId}} has been processed. Total: ${{totalAmount}}</p>"
+  }'
+```
+
+### 4. Preview Template with Mock Data (`POST /v1/templates/:code/preview`)
+```bash
+curl -X POST http://localhost:3000/v1/templates/order_receipt/preview \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "data": {
+      "customerName": "Alice",
+      "orderId": "ORD-9821",
+      "totalAmount": 149.50
+    }
+  }'
+```
+
+### 5. Delete a Template (`DELETE /v1/templates/:code`)
+```bash
+curl -X DELETE http://localhost:3000/v1/templates/order_receipt \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
 ---
 
 ## 📚 Complete Multi-Language Documentation

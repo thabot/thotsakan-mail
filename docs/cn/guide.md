@@ -72,3 +72,94 @@ curl -X POST http://localhost:3000/v1/emails/send \
     "async": false
   }'
 ```
+
+### 3.3 批量并发投递 (单次请求高达 500 封)
+```bash
+curl -X POST http://localhost:3000/v1/emails/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "emails": [
+      { "to": "user1@domain.com", "subject": "系统通知 1", "html": "<p>内容 1</p>" },
+      { "to": "user2@domain.com", "subject": "系统通知 2", "html": "<p>内容 2</p>" }
+    ]
+  }'
+```
+
+### 3.4 动态模板变量邮件投递
+```bash
+curl -X POST http://localhost:3000/v1/emails/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "to": "customer@example.com",
+    "templateCode": "order_receipt",
+    "templateData": {
+      "customer": "张三",
+      "orderId": "ORD-2026",
+      "amount": 99.00
+    },
+    "priority": "normal",
+    "async": true
+  }'
+```
+
+---
+
+## 4. 邮件模板管理 (CRUD 及 MJML 引擎)
+
+### 4.1 创建新模板 (`POST /v1/templates`)
+```bash
+curl -X POST http://localhost:3000/v1/templates \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "code": "order_receipt",
+    "name": "订单收据模板",
+    "subjectTemplate": "尊敬的 {{customer}}，您的订单 #{{orderId}} 已确认",
+    "htmlContent": "<h1>感谢订购，{{customer}}！</h1><p>总计支付: <b>${{amount}}</b></p>",
+    "mjmlContent": "<mjml><mj-body><mj-section><mj-column><mj-text>感谢订购，{{customer}}！</mj-text></mj-column></mj-section></mj-body></mjml>"
+  }'
+```
+
+### 4.2 查询所有或特定模板 (`GET /v1/templates`)
+```bash
+# 查询全部模板
+curl -H "X-API-Key: 您的API密钥" http://localhost:3000/v1/templates
+
+# 查询单个模板
+curl -H "X-API-Key: 您的API密钥" http://localhost:3000/v1/templates/order_receipt
+```
+
+### 4.3 修改现有模板 (`PUT /v1/templates/:code`)
+```bash
+curl -X PUT http://localhost:3000/v1/templates/order_receipt \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "name": "订单收据模板 (升级版)",
+    "subjectTemplate": "官方收据: 订单 #{{orderId}}",
+    "htmlContent": "<h1>尊敬的 {{customer}}</h1><p>您的订单 #{{orderId}} 已经发货。金额: ${{amount}}</p>"
+  }'
+```
+
+### 4.4 模板实时渲染预览 (`POST /v1/templates/:code/preview`)
+```bash
+curl -X POST http://localhost:3000/v1/templates/order_receipt/preview \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "data": {
+      "customer": "张三",
+      "orderId": "ORD-2026",
+      "amount": 99.00
+    }
+  }'
+```
+
+### 4.5 删除模板 (`DELETE /v1/templates/:code`)
+```bash
+curl -X DELETE http://localhost:3000/v1/templates/order_receipt \
+  -H "X-API-Key: 您的API密钥"
+```
+

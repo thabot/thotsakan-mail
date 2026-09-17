@@ -6,6 +6,7 @@ import { RateLimitService } from '../services/rate-limit.service.js';
 import { FailoverService } from '../services/failover.service.js';
 import { DeadLetterService } from '../services/dead-letter.service.js';
 import { SentboxCleanerService } from '../services/sentbox-cleaner.service.js';
+import { TemplateEngineService } from '../services/template-engine.service.js';
 import { CryptoService } from '../services/crypto.service.js';
 import { getEnv } from '../config/env.js';
 import type { EmailMessage } from '../core/types/email.types.js';
@@ -22,6 +23,7 @@ export class QueueWorker {
   private failoverService: FailoverService;
   private deadLetterService: DeadLetterService;
   private sentboxCleaner: SentboxCleanerService;
+  private templateEngine: TemplateEngineService;
   private crypto: CryptoService;
   private isRunning: boolean = false;
   private timer: any = null;
@@ -33,6 +35,7 @@ export class QueueWorker {
     this.failoverService = new FailoverService(db);
     this.deadLetterService = new DeadLetterService();
     this.sentboxCleaner = new SentboxCleanerService();
+    this.templateEngine = new TemplateEngineService(db);
     this.crypto = new CryptoService(getEnv().ENCRYPTION_KEY);
   }
 
@@ -83,6 +86,17 @@ export class QueueWorker {
       }
     } else {
       message = { to: recipients, subject: job.subject, saveToSentItems: !!job.save_to_sent_items };
+    }
+
+    // Resolve template if needed
+    const tplCode = message.templateCode || message.templateId;
+    if (tplCode && (!message.html || !message.subject || message.subject === '(No Subject)')) {
+      const rendered = this.templateEngine.renderByCode(job.tenant_id, tplCode, message.templateData || {});
+      if (rendered) {
+        if (!message.subject || message.subject === '(No Subject)') message.subject = rendered.subject;
+        if (!message.html) message.html = rendered.html;
+        if (!message.text && rendered.text) message.text = rendered.text;
+      }
     }
 
     // Resolve initial account

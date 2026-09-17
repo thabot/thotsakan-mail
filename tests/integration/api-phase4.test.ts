@@ -5,6 +5,7 @@ import { createTestDatabase } from '../helpers/test-db.js';
 import { ApiKeyRepository } from '../../src/database/repositories/api-key.repository.js';
 import { createAuthMiddleware } from '../../src/api/middlewares/auth.middleware.js';
 import { createTemplatesRoute } from '../../src/api/routes/templates.route.js';
+import { createEmailsRoute } from '../../src/api/routes/emails.route.js';
 import { createTrackingRoute } from '../../src/api/routes/tracking.route.js';
 import { createWebhooksRoute } from '../../src/api/routes/webhooks.route.js';
 import { createWebUIRoute } from '../../src/ui/ui.route.js';
@@ -27,6 +28,7 @@ describe('Integration: Phase 4 Web UI, Templates, Tracking & Webhooks Routes', (
   const authGroup = new Hono();
   authGroup.use('*', createAuthMiddleware(apiKeyRepo));
   authGroup.route('/', createTemplatesRoute(db));
+  authGroup.route('/', createEmailsRoute(db));
   app.route('/', authGroup);
 
   const authHeaders = { 'X-API-Key': plainKey, 'Content-Type': 'application/json' };
@@ -41,7 +43,7 @@ describe('Integration: Phase 4 Web UI, Templates, Tracking & Webhooks Routes', (
   });
 
   it('Template CRUD and Preview rendering', async () => {
-    // Create template
+    // 1. Create template
     const createRes = await app.request('/v1/templates', {
       method: 'POST',
       headers: authHeaders,
@@ -54,7 +56,26 @@ describe('Integration: Phase 4 Web UI, Templates, Tracking & Webhooks Routes', (
     });
     expect(createRes.status).toBe(201);
 
-    // Preview template
+    // 2. Read template
+    const getRes = await app.request('/v1/templates/invoice_receipt', {
+      headers: authHeaders,
+    });
+    expect(getRes.status).toBe(200);
+    const getJson: any = await getRes.json();
+    expect(getJson.template.name).toBe('Invoice Receipt');
+
+    // 3. Update template
+    const updateRes = await app.request('/v1/templates/invoice_receipt', {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({
+        name: 'Updated Invoice Receipt',
+        subjectTemplate: 'Official Receipt #{{invoiceId}} for {{customer}}',
+      }),
+    });
+    expect(updateRes.status).toBe(200);
+
+    // 4. Preview template
     const previewRes = await app.request('/v1/templates/invoice_receipt/preview', {
       method: 'POST',
       headers: authHeaders,
@@ -64,8 +85,39 @@ describe('Integration: Phase 4 Web UI, Templates, Tracking & Webhooks Routes', (
     });
     expect(previewRes.status).toBe(200);
     const previewJson: any = await previewRes.json();
-    expect(previewJson.subject).toBe('Invoice #INV-99 for John Doe');
+    expect(previewJson.subject).toBe('Official Receipt #INV-99 for John Doe');
     expect(previewJson.html).toContain('Total amount: <b>$150</b>');
+
+    // 5. Send email using template
+    const sendRes = await app.request('/v1/emails/send', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        to: 'buyer@example.com',
+        templateCode: 'invoice_receipt',
+        templateData: { invoiceId: 'INV-100', customer: 'Alice', amount: 250 },
+        async: true,
+      }),
+    });
+    expect(sendRes.status).toBe(202);
+    const sendJson: any = await sendRes.json();
+    expect(sendJson.ok).toBe(true);
+
+    const logRow: any = db.prepare('SELECT subject, message_payload FROM email_logs WHERE job_id = ?').get(sendJson.jobId);
+    expect(logRow.subject).toBe('Official Receipt #INV-100 for Alice');
+
+    // 6. Delete template
+    const deleteRes = await app.request('/v1/templates/invoice_receipt', {
+      method: 'DELETE',
+      headers: authHeaders,
+    });
+    expect(deleteRes.status).toBe(200);
+
+    // 7. Verify deleted
+    const verifyGet = await app.request('/v1/templates/invoice_receipt', {
+      headers: authHeaders,
+    });
+    expect(verifyGet.status).toBe(404);
   });
 
   it('Tracking Open Pixel should record open and return transparent GIF', async () => {
