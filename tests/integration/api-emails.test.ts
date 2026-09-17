@@ -168,4 +168,68 @@ describe('Integration: API Emails Route', () => {
     });
     expect(delRes.status).toBe(200);
   });
+
+  it('Accounts Management CRUD should create, retrieve, update rate limits, and delete accounts', async () => {
+    // 1. Create Account with rate limits
+    const createRes = await app.request('/v1/accounts', {
+      method: 'POST',
+      headers: authHeader,
+      body: JSON.stringify({
+        name: 'Secondary AWS SES',
+        providerType: 'aws-ses',
+        fromEmail: 'noreply@corp.com',
+        fromName: 'Corp Notifier',
+        dailyQuotaLimit: 25000,
+        rateLimitPerMinute: 120,
+        credentials: {
+          accessKeyId: 'AKIA_TEST',
+          secretAccessKey: 'SECRET_TEST',
+          region: 'us-west-2',
+        },
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const createJson: any = await createRes.json();
+    expect(createJson.accountId).toBeDefined();
+    const accId = createJson.accountId;
+
+    // 2. Get Account by ID
+    const getRes = await app.request(`/v1/accounts/${accId}`, { headers: authHeader });
+    expect(getRes.status).toBe(200);
+    const getJson: any = await getRes.json();
+    expect(getJson.account.name).toBe('Secondary AWS SES');
+    expect(getJson.account.rate_limit_per_minute).toBe(120);
+    expect(getJson.account.daily_quota_limit).toBe(25000);
+    expect(getJson.account.credentials).toBe('[ENCRYPTED]');
+
+    // 3. Update Account Rate Limits & Quotas
+    const updateRes = await app.request(`/v1/accounts/${accId}`, {
+      method: 'PUT',
+      headers: authHeader,
+      body: JSON.stringify({
+        name: 'Updated AWS SES Cluster',
+        rateLimitPerMinute: 300,
+        dailyQuotaLimit: 50000,
+      }),
+    });
+    expect(updateRes.status).toBe(200);
+
+    // Verify updated
+    const getUpdated = await app.request(`/v1/accounts/${accId}`, { headers: authHeader });
+    const updatedJson: any = await getUpdated.json();
+    expect(updatedJson.account.name).toBe('Updated AWS SES Cluster');
+    expect(updatedJson.account.rate_limit_per_minute).toBe(300);
+    expect(updatedJson.account.daily_quota_limit).toBe(50000);
+
+    // 4. Delete Account
+    const deleteRes = await app.request(`/v1/accounts/${accId}`, {
+      method: 'DELETE',
+      headers: authHeader,
+    });
+    expect(deleteRes.status).toBe(200);
+
+    // 5. Verify deleted
+    const verifyGet = await app.request(`/v1/accounts/${accId}`, { headers: authHeader });
+    expect(verifyGet.status).toBe(404);
+  });
 });

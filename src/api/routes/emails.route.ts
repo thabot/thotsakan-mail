@@ -70,6 +70,17 @@ const CreateAccountSchema = z.object({
   fallbackAccountId: z.string().optional(),
 });
 
+const UpdateAccountSchema = z.object({
+  name: z.string().min(1).optional(),
+  fromEmail: z.string().email().optional(),
+  fromName: z.string().optional(),
+  dailyQuotaLimit: z.number().int().positive().optional(),
+  rateLimitPerMinute: z.number().int().positive().optional(),
+  fallbackAccountId: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
+  credentials: z.record(z.any()).optional(),
+});
+
 const CreateRuleSchema = z.object({
   priority: z.number().int().default(0),
   conditionType: z.enum(['domain_match', 'subject_contains', 'recipient_regex']),
@@ -430,6 +441,41 @@ export function createEmailsRoute(db: Database) {
     });
 
     return c.json({ ok: true, accountId, message: 'Account created' }, 201);
+  });
+
+  app.get('/v1/accounts/:id', (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const id = c.req.param('id');
+    const account = accountRepo.findById(id);
+    if (!account || account.tenant_id !== tenantId) {
+      return c.json({ error: 'Account not found' }, 404);
+    }
+    return c.json({
+      ok: true,
+      account: {
+        ...account,
+        credentials: '[ENCRYPTED]',
+      },
+    });
+  });
+
+  app.put('/v1/accounts/:id', zValidator('json', UpdateAccountSchema), (c) => {
+    const tenantId = c.get('tenantId') || 'default_tenant';
+    const id = c.req.param('id');
+    const body = c.req.valid('json');
+
+    const existing = accountRepo.findById(id);
+    if (!existing || existing.tenant_id !== tenantId) {
+      return c.json({ error: 'Account not found' }, 404);
+    }
+
+    const updates: any = { ...body };
+    if (body.credentials) {
+      updates.credentials = crypto.encrypt(JSON.stringify(body.credentials));
+    }
+
+    accountRepo.update(id, tenantId, updates);
+    return c.json({ ok: true, message: 'Account updated successfully' });
   });
 
   app.delete('/v1/accounts/:id', (c) => {

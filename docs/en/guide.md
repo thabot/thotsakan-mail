@@ -165,3 +165,108 @@ curl -X DELETE http://localhost:3000/v1/templates/invoice_receipt \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
+---
+
+## 5. Multi-Provider Accounts & Rate Limit Management
+
+Thotsakan allows connecting **multiple sender accounts concurrently** across 14 providers. Each account enforces independent **per-minute rate limits** and **daily quota limits**, with seamless automatic failover.
+
+### 5.1 Register Primary Account (e.g. AWS SES - 300/min, 50k/day)
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "AWS SES Production",
+    "providerType": "aws-ses",
+    "fromEmail": "notifications@example.com",
+    "fromName": "Production Alert",
+    "rateLimitPerMinute": 300,
+    "dailyQuotaLimit": 50000,
+    "credentials": {
+      "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+      "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "region": "us-east-1"
+    }
+  }'
+```
+
+### 5.2 Register Backup Account (e.g. Resend) with Failover Link
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Resend Standby",
+    "providerType": "resend",
+    "fromEmail": "notifications@example.com",
+    "rateLimitPerMinute": 60,
+    "dailyQuotaLimit": 10000,
+    "credentials": {
+      "apiKey": "re_123456789_abcdef"
+    }
+  }'
+```
+
+### 5.3 Inspect & Update Account Quotas (`PUT /v1/accounts/:id`)
+```bash
+# List all accounts
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts
+
+# Update limits and link fallback account
+curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "rateLimitPerMinute": 600,
+    "dailyQuotaLimit": 100000,
+    "fallbackAccountId": "acc_standby_789"
+  }'
+```
+
+---
+
+## 6. Real-Time Analytics, Queue Reports & Logs
+
+Query transmission metrics, live backlog in the priority queue, failure counters, and granular transmission audit logs:
+
+### 6.1 Aggregate Delivery Overview (`GET /v1/metrics/overview`)
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
+```
+**Sample Response:**
+```json
+{
+  "ok": true,
+  "metrics": {
+    "total": 125430,
+    "sent": 124800,
+    "pending": 45,
+    "processing": 12,
+    "failed": 88,
+    "suppressed": 485
+  }
+}
+```
+- `total`: Cumulative email dispatch requests received.
+- `sent`: Successfully delivered emails.
+- `pending`: Unprocessed emails waiting in the SQLite WAL Priority Queue.
+- `processing`: Jobs actively being dispatched to provider APIs.
+- `failed`: Exhausted retries and dispatched to dead-letter alerts.
+- `suppressed`: Skipped due to previous hard-bounces or spam complaints.
+
+### 6.2 Filter Transmission Logs (`GET /v1/emails/logs`)
+```bash
+# Get last 20 failed or throttled emails
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?status=FAILED&limit=20"
+
+# Search dispatch history by recipient email
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipient=customer@domain.com"
+```
+
+### 6.3 Prometheus Scrape Endpoint (`GET /metrics/prometheus`)
+```bash
+curl http://localhost:3000/metrics/prometheus
+```
+
+

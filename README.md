@@ -201,6 +201,113 @@ curl -X DELETE http://localhost:3000/v1/templates/order_receipt \
 
 ---
 
+## ⚙️ Multi-Provider Outbound Accounts & Rate Limiting
+
+Thotsakan supports connecting **multiple sender accounts simultaneously** across 14 providers. Each account enforces independent **per-minute rate limits** and **daily quota ceilings**, with automatic failover chaining.
+
+### 1. Register Primary Sender (e.g. AWS SES - 300/min, 50k/day)
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "AWS SES Production",
+    "providerType": "aws-ses",
+    "fromEmail": "notifications@example.com",
+    "fromName": "Production Alert",
+    "rateLimitPerMinute": 300,
+    "dailyQuotaLimit": 50000,
+    "credentials": {
+      "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+      "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "region": "us-east-1"
+    }
+  }'
+```
+
+### 2. Register Backup Sender (e.g. Resend / Postmark / M365 Failover)
+Configure a backup account and link it as `fallbackAccountId`:
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Resend Standby",
+    "providerType": "resend",
+    "fromEmail": "notifications@example.com",
+    "rateLimitPerMinute": 60,
+    "dailyQuotaLimit": 10000,
+    "credentials": {
+      "apiKey": "re_123456789_abcdef"
+    }
+  }'
+```
+
+### 3. List & Inspect Connected Accounts
+```bash
+# List all registered accounts
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts
+
+# Get single account by ID (credentials returned as [ENCRYPTED])
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts/acc_123456
+```
+
+### 4. Update Rate Limits, Daily Quotas, or Failover Link (`PUT /v1/accounts/:id`)
+```bash
+curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "rateLimitPerMinute": 500,
+    "dailyQuotaLimit": 100000,
+    "fallbackAccountId": "acc_standby_789"
+  }'
+```
+
+---
+
+## 📊 Real-Time Analytics & Delivery Reports
+
+Check delivery metrics, queue backlog, failure rates, and granular transmission logs in real-time:
+
+### 1. Delivery Overview Metrics (`GET /v1/metrics/overview`)
+Inspect total processed, pending/in-queue backlog, successful sends, throttled, and failed counts:
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
+```
+**Response:**
+```json
+{
+  "ok": true,
+  "metrics": {
+    "total": 125430,
+    "sent": 124800,
+    "pending": 45,
+    "processing": 12,
+    "failed": 88,
+    "suppressed": 485
+  }
+}
+```
+
+### 2. Query Dispatch Logs & Delivery Status (`GET /v1/emails/logs`)
+Filter logs by status (`SENT`, `PENDING`, `FAILED`, `THROTTLED`, `SUPPRESSED`) or search by recipient:
+```bash
+# Get last 20 failed or throttled emails
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?status=FAILED&limit=20"
+
+# Search dispatch history for a specific recipient
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipient=customer@domain.com"
+```
+
+### 3. Prometheus Metrics Endpoint (`GET /metrics/prometheus`)
+Scrape live gauge and counter metrics for Grafana / Prometheus monitoring:
+```bash
+curl http://localhost:3000/metrics/prometheus
+```
+
+---
+
 ## 📚 Complete Multi-Language Documentation
 
 - 🇬🇧 **[English Documentation (docs/en/guide.md)](docs/en/guide.md)** — Complete Setup, 3-Minute AWS SES Guide, Architecture & API Reference.

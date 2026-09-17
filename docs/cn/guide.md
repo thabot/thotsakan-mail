@@ -163,3 +163,108 @@ curl -X DELETE http://localhost:3000/v1/templates/order_receipt \
   -H "X-API-Key: 您的API密钥"
 ```
 
+---
+
+## 5. 多发信账户配置与速率配额限制 (Multi-Provider Accounts & Rate Limiting)
+
+Thotsakan 支持**同时挂载多家邮件服务商**的多发信账户，每个账户可针对**每分钟限速 (Rate Limit Per Minute)** 和**单日最大发信配额 (Daily Quota Limit)** 进行独立硬限制，并自动串联 Failover 故障转移。
+
+### 5.1 接入主力发信账户 (例如 AWS SES: 每分钟 300 封，单日 50,000 封)
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "name": "AWS SES 生产主力",
+    "providerType": "aws-ses",
+    "fromEmail": "service@company.com",
+    "fromName": "企业通知系统",
+    "rateLimitPerMinute": 300,
+    "dailyQuotaLimit": 50000,
+    "credentials": {
+      "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+      "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "region": "ap-east-1"
+    }
+  }'
+```
+
+### 5.2 接入备用发信账户 (例如 Resend 或 M365) 并绑定降级通道
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "name": "Resend 备用通道",
+    "providerType": "resend",
+    "fromEmail": "service@company.com",
+    "rateLimitPerMinute": 60,
+    "dailyQuotaLimit": 10000,
+    "credentials": {
+      "apiKey": "re_123456789_abcdef"
+    }
+  }'
+```
+
+### 5.3 查询与动态调整配额限速 (`PUT /v1/accounts/:id`)
+```bash
+# 查询全部已挂载账户
+curl -H "X-API-Key: 您的API密钥" http://localhost:3000/v1/accounts
+
+# 调整限速阈值及绑定 Fallback
+curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: 您的API密钥" \
+  -d '{
+    "rateLimitPerMinute": 600,
+    "dailyQuotaLimit": 100000,
+    "fallbackAccountId": "acc_standby_789"
+  }'
+```
+
+---
+
+## 6. 实时投递指标、队列监控与报告 (Real-Time Metrics & Reports)
+
+系统内置毫秒级指标监控，可随时掌握成功率、堆积积压量与失败日志：
+
+### 6.1 聚合发送指标概览 (`GET /v1/metrics/overview`)
+```bash
+curl -H "X-API-Key: 您的API密钥" http://localhost:3000/v1/metrics/overview
+```
+**返回数据样例 (JSON):**
+```json
+{
+  "ok": true,
+  "metrics": {
+    "total": 89200,
+    "sent": 88750,
+    "pending": 25,
+    "processing": 8,
+    "failed": 32,
+    "suppressed": 385
+  }
+}
+```
+- `total`: 系统接收的总邮件任务数
+- `sent`: 成功投递并确认的邮件量
+- `pending`: 在 SQLite WAL 优先级队列中等待的积压量
+- `processing`: 正在被调度器调用云端 API 发送中的任务
+- `failed`: 重试耗尽失败并转入死信告警的任务
+- `suppressed`: 拦截的黑名单/硬退信/垃圾投诉地址
+
+### 6.2 投递日志精准检索 (`GET /v1/emails/logs`)
+```bash
+# 检索最近 20 封发送失败的任务
+curl -H "X-API-Key: 您的API密钥" "http://localhost:3000/v1/emails/logs?status=FAILED&limit=20"
+
+# 按收件人邮箱精准查单
+curl -H "X-API-Key: 您的API密钥" "http://localhost:3000/v1/emails/logs?recipient=customer@domain.com"
+```
+
+### 6.3 Prometheus / Grafana 指标拉取 (`GET /metrics/prometheus`)
+```bash
+curl http://localhost:3000/metrics/prometheus
+```
+
+

@@ -164,3 +164,108 @@ curl -X DELETE http://localhost:3000/v1/templates/welcome_member \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
+---
+
+## 5. การตั้งค่าบัญชีผู้ส่งหลายค่าย และจำกัดโควตา (Multi-Provider Accounts & Rate Limiting)
+
+ระบบ Thotsakan รองรับการเชื่อมต่อ **บัญชีผู้ส่งพร้อมกันหลายบัญชี** สามารถแยกค่าย (AWS SES, Microsoft 365, Gmail, Resend, Generic SMTP) และกำหนด **เพดานต่อนาที (Rate Limit Per Minute)** และ **โควตาสูงสุดต่อวัน (Daily Quota Limit)** พร้อมเชื่อมต่อระบบ Failover สำรองอัตโนมัติ
+
+### 5.1 เชื่อมต่อบัญชีหลัก (เช่น AWS SES - สูงสุด 300 ฉบับ/นาที, 50,000 ฉบับ/วัน)
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "AWS SES เมนหลัก",
+    "providerType": "aws-ses",
+    "fromEmail": "noreply@company.com",
+    "fromName": "Company System",
+    "rateLimitPerMinute": 300,
+    "dailyQuotaLimit": 50000,
+    "credentials": {
+      "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+      "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "region": "ap-southeast-1"
+    }
+  }'
+```
+
+### 5.2 เชื่อมต่อบัญชีสำรอง (เช่น Resend หรือ M365) พร้อมผูกเป็น Fallback
+```bash
+curl -X POST http://localhost:3000/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Resend บัญชีสำรอง",
+    "providerType": "resend",
+    "fromEmail": "noreply@company.com",
+    "rateLimitPerMinute": 60,
+    "dailyQuotaLimit": 10000,
+    "credentials": {
+      "apiKey": "re_123456789_abcdef"
+    }
+  }'
+```
+
+### 5.3 ดูรายการและอัปเดตโควตาเพดานการส่ง (`PUT /v1/accounts/:id`)
+```bash
+# เรียกดูบัญชีทั้งหมด
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts
+
+# ปรับเพดานส่งเป็น 600 ฉบับ/นาที และ 100,000 ฉบับ/วัน
+curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "rateLimitPerMinute": 600,
+    "dailyQuotaLimit": 100000,
+    "fallbackAccountId": "acc_backup_789"
+  }'
+```
+
+---
+
+## 6. การตรวจสอบสถิติ รายงานผล และคิวค้าง (Real-Time Metrics & Reports)
+
+ระบบมี API สำหรับตรวจสอบประสิทธิภาพแบบ Real-time เช็คได้ทั้งจำนวนที่ส่งสำเร็จ, เมลที่ค้างในคิว, เมลที่ล้มเหลว และการดึง Log ย้อนหลัง:
+
+### 6.1 สรุปภาพรวมการส่งทั้งหมด (`GET /v1/metrics/overview`)
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
+```
+**ตัวอย่างผลลัพธ์ (JSON Response):**
+```json
+{
+  "ok": true,
+  "metrics": {
+    "total": 54200,
+    "sent": 53950,
+    "pending": 30,
+    "processing": 10,
+    "failed": 25,
+    "suppressed": 185
+  }
+}
+```
+- `total`: ยอดรวมคำขอส่งอีเมลทั้งหมด
+- `sent`: ส่งสำเร็จแล้ว
+- `pending`: ค้างอยู่ในคิวรอการส่ง (Priority Queue)
+- `processing`: กำลังประมวลผลการส่ง ณ วินาทีนั้น
+- `failed`: ส่งไม่สำเร็จ (เกินจำนวน Retry และแจ้งเตือนเข้า Dead-Letter)
+- `suppressed`: ถูกระงับไม่ส่งเนื่องจากติด Suppression List (เคย Hard Bounce หรือ SPAM)
+
+### 6.2 ตรวจสอบประวัติ Log การส่งแยกตามสถานะ (`GET /v1/emails/logs`)
+```bash
+# ดูรายการเมลที่ส่งไม่สำเร็จ 20 ฉบับล่าสุด
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?status=FAILED&limit=20"
+
+# ค้นหาประวัติการส่งตามอีเมลปลายทาง
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipient=customer@domain.com"
+```
+
+### 6.3 ดึง Metrics ไปยัง Grafana / Prometheus (`GET /metrics/prometheus`)
+```bash
+curl http://localhost:3000/metrics/prometheus
+```
+
+
