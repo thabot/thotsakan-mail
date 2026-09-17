@@ -2,7 +2,7 @@
 
 <div align="center">
   <h3>The 10-Headed Multi-Provider Transactional Email Dispatcher Microservice</h3>
-  <p>Ultra-lightweight (< 40 MB RAM), 5ms Response Time, Priority Queue, Smart Failover, and Inbound SMTP Relay on Bun + Hono + SQLite WAL.</p>
+  <p>Ultra-lightweight (< 40 MB RAM), 5ms Response Time, Priority Queue, Smart Failover, and Inbound SMTP Relay built on Bun + Hono + SQLite WAL.</p>
 
   [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
   [![Commercial License: Available](https://img.shields.io/badge/Commercial%20License-Lemon%20Squeezy-purple.svg)](#dual-license-model)
@@ -13,56 +13,112 @@
 
 ---
 
-## ⚡️ Key Value Propositions (ทำไมต้องทศกัณฐ์?)
+## ⚡️ Key Value Propositions
 
-- 💸 **ประหยัดค่าส่งอีเมลลงกว่า 90%:** สลับการส่งอีเมลปริมาณมากไปที่ **AWS SES (\$0.10 ต่อ 10,000 ฉบับ)** เป็นช่องทางหลัก แทนที่จะจ่ายแพงให้ SaaS เจ้าเดิม
-- 🔄 **Smart Failover ครบ 14 ค่าย:** สลับอัตโนมัติเมื่อเจอปัญหา 429 Rate Limit หรือ Provider ล่ม (AWS SES, Microsoft 365, Google Workspace/Gmail, Resend, Postmark, SendGrid, Brevo, Mailgun, Scaleway, MailerSend, ZeptoMail, SparkPost, Mandrill, On-Premises SMTP)
-- 🧹 **Sentbox Cleaner ในตัว:** สำหรับ Microsoft 365 และ Gmail ระบบสั่งลบอีเมลออกจากกล่อง Sent Items อัตโนมัติ ป้องกันกล่องจดหมายเต็มและรักษาความลับ OTP
-- 🚀 **Priority Queue ในตัว:** รหัส OTP (High Priority) แซงคิวเมลแจ้งเตือนทั่วไปได้ทันที โดยไม่ต้องตั้งค่า Redis
-- 📬 **Inbound SMTP Relay:** ทำหน้าที่เป็น SMTP Server (พอร์ต 587 / 2525) ให้ WordPress, Laravel, ERP ชี้มาแล้วได้ระบบ Queue + Failover ไปยัง SES ทันทีโดยไม่ต้องแก้โค้ด
-- 🖥️ **Web Console & Quick Send:** หน้าเว็บแดชบอร์ด Single-File SPA (< 1MB) ในตัว มีระบบตรวจเช็ก DNS (SPF, DKIM, DMARC) ในคลิกเดียว
-- 🔒 **Zero-Downtime SQLite Backup:** ระบบ Hot Backup ในตัวด้วย `VACUUM INTO` ไม่บล็อกการส่งอีเมล พร้อมหมุนเวียนเก็บ 7 วันล่าสุด
+- 💸 **Save Over 90% on Email Delivery Costs:** Shift high-volume transactional workloads to **AWS SES ($0.10 per 10,000 emails)** as your primary cost optimizer, replacing overpriced SaaS providers.
+- 🔄 **Smart Failover Across 14 Email Providers:** Automatic transient error detection (HTTP 429, 5xx, timeouts) and fallback routing across:
+  - **Cloud Infrastructure:** AWS SES, Scaleway
+  - **Enterprise Mailboxes:** Microsoft 365 / Graph, Google Workspace / Gmail
+  - **Modern SaaS:** Resend, Postmark, SendGrid, Brevo, Mailgun, MailerSend, ZeptoMail, SparkPost, Mandrill
+  - **On-Premises:** Generic SMTP (Exchange, Postfix, Zimbra)
+- 🧹 **Automated Sentbox Cleaner:** For Microsoft 365 and Gmail, automatically purges dispatched OTP and notification messages from the Sent Items folder, preventing mailbox bloat and securing confidential codes.
+- 🚀 **Zero-Redis SQLite Priority Queue:** Urgent OTP emails jump ahead of marketing blasts instantly using SQLite WAL concurrency-safe transactions.
+- 📬 **Inbound SMTP Relay:** Acts as an internal SMTP Server (ports 587 / 2525) allowing WordPress, WooCommerce, Laravel, and legacy ERP systems to enjoy Queue + Failover to AWS SES without changing a single line of application code.
+- 🖥️ **Built-in Web Console & Quick Send:** Embedded single-file SPA (< 1MB) with a real-time Dispatch Playground, Live Logs, and One-Click DNS Verification (SPF, DKIM, DMARC).
+- 🔒 **Zero-Downtime SQLite Backup:** Online hot backups via `VACUUM INTO` without locking write operations, retaining a 7-day snapshot rotation.
 
 ---
 
-## 🚀 Quick Start (เริ่มต้นใช้งานใน 1 นาที)
+## 🚀 Quick Start (Up in 60 Seconds)
 
-### 1. ติดตั้งและเริ่มรันผ่าน Docker
+### Option 1: Run with Docker Compose (Recommended)
 ```bash
 docker compose up -d
 ```
-เปิดบราวเซอร์ไปที่ `http://localhost:3000/console` เพื่อเข้าสู่ Web Console
+Open your browser and navigate to `http://localhost:3000/console` to access the Web Console.
 
-### 2. หรือรันผ่าน Bun โดยตรง
+### Option 2: Run with Bun Directly
 ```bash
-# Clone repository
-git clone https://github.com/bothanom/thotsakan-mail.git
+# 1. Clone repository
+git clone https://github.com/thabot/thotsakan-mail.git
 cd thotsakan-mail
 
-# ติดตั้ง Dependencies
+# 2. Install dependencies
 bun install
 
-# คัดลอก Environment File
+# 3. Configure environment
 cp .env.example .env
 
-# รันระบบ Development
+# 4. Start the engine
 bun run dev
 ```
 
 ---
 
-## 📚 เอกสารคู่มือการใช้งาน (Documentation)
+## 📡 API Usage Quick Reference
 
-- 🇹🇭 **[คู่มือภาษาไทย (Thai Guide)](docs/th/guide.md)** - วิธีติดตั้ง, เชื่อมต่อ AWS SES ใน 3 นาที, และการใช้งาน Web Console
-- 🇬🇧 **[English Documentation](docs/en/guide.md)** - Full Installation Guide, 3-Minute AWS SES setup, and Architecture
-- 🇨🇳 **[中文使用手册 (Chinese Documentation)](docs/cn/guide.md)** - 系统架构, 3分钟接入AWS SES, 及控制台使用指南
-- 💻 **[Client SDK Snippets (7 Languages)](docs/sdk/sdks.md)** - โค้ดตัวอย่างสำหรับ C#/.NET 8, Java 17+, TypeScript/Node.js, Python, PHP/Laravel, Go, และ cURL
+### 1. Asynchronous Enqueue (< 5ms response)
+```bash
+curl -X POST http://localhost:3000/v1/emails/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "to": "customer@example.com",
+    "subject": "Order Confirmed #10294",
+    "html": "<h1>Order Received</h1><p>Thank you for your purchase!</p>",
+    "priority": "normal",
+    "async": true
+  }'
+```
+
+### 2. High-Priority Synchronous Send (Instant OTP)
+```bash
+curl -X POST http://localhost:3000/v1/emails/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Your Login Verification Code",
+    "html": "<p>Your OTP code is <b>849201</b> (valid for 5 minutes)</p>",
+    "priority": "high",
+    "async": false
+  }'
+```
+
+### 3. Bulk Batch Dispatch (Up to 500 emails per request)
+```bash
+curl -X POST http://localhost:3000/v1/emails/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "emails": [
+      { "to": "user1@domain.com", "subject": "Notice #1", "html": "<p>Content 1</p>" },
+      { "to": "user2@domain.com", "subject": "Notice #2", "html": "<p>Content 2</p>" }
+    ]
+  }'
+```
 
 ---
 
-## 🧪 Testing
+## 📚 Complete Multi-Language Documentation
 
-ชุดทดสอบครอบคลุมทั้ง Unit Test และ Integration Test ทั้งหมด 27 Test Files รันผ่าน 100%:
+- 🇬🇧 **[English Documentation (docs/en/guide.md)](docs/en/guide.md)** — Complete Setup, 3-Minute AWS SES Guide, Architecture & API Reference.
+- 🇹🇭 **[คู่มือภาษาไทย (docs/th/guide.md)](docs/th/guide.md)** — ติดตั้งระบบ, เชื่อมต่อ AWS SES ใน 3 นาที, และการใช้งาน Web Console.
+- 🇨🇳 **[中文使用手册 (docs/cn/guide.md)](docs/cn/guide.md)** — 系统架构, 3分钟接入AWS SES, 及控制台使用指南.
+- 💻 **[Client SDK Snippets (docs/sdk/sdks.md)](docs/sdk/sdks.md)** — Ready-to-use code examples for:
+  - **C# / .NET 8** (`System.Net.Http.Json`)
+  - **Java 17+** (`java.net.http.HttpClient`)
+  - **TypeScript / Node.js** (`fetch`)
+  - **Python 3** (`requests` / `httpx`)
+  - **PHP / Laravel** (`Http::withHeaders`)
+  - **Go** (`net/http`)
+  - **cURL / Shell**
+
+---
+
+## 🧪 Automated Testing
+
+Comprehensive test suites covering unit and integration testing across all 14 providers:
 
 ```bash
 bun test
@@ -78,12 +134,12 @@ Ran 106 tests across 27 files. [259.00ms]
 
 ## 📜 Dual License Model
 
-Thotsakan Mail Engine ใช้โมเดลสิทธิ์การใช้งานแบบคู่:
-1. **Community Edition (AGPLv3):** ฟรี 100% สำหรับการศึกษา, นักพัฒนาอิสระ, และโปรเจกต์ Open-Source ภายใต้เงื่อนไข AGPLv3
-2. **Commercial Edition (Pro / Enterprise):** สำหรับการใช้งานเชิงพาณิชย์ที่ไม่ต้องการเปิดเผยซอร์สโค้ดตามสัญญา AGPLv3 พร้อมฟีเจอร์ระดับองค์กร (Web Console เต็มรูปแบบ, Unlimited Tenants/Accounts, Priority Support) สั่งซื้อและรับ License Key ผ่าน Lemon Squeezy
+Thotsakan Mail Engine is distributed under a Dual License model:
+1. **Community Edition (AGPLv3):** 100% free and open-source for personal projects, independent developers, and open-source software under AGPLv3 terms.
+2. **Commercial Edition (Pro / Enterprise):** Tailored for commercial proprietary applications that cannot comply with AGPLv3 copyleft terms. Unlocks full Web Console access, unlimited tenants/accounts, and priority support. Available via Lemon Squeezy.
 
 ---
 
 <div align="center">
-  Made with ❤️ by bothanom & the Open Source Community
+  Maintained with ❤️ by <a href="https://github.com/thabot">thabot</a> & the Open Source Community
 </div>
