@@ -332,3 +332,13 @@ docker run -d --name thotsakan \
   ghcr.io/thabot/thotsakan-mail:latest
 ```
 เมื่อรันเสร็จ เปิดหน้าเว็บคอนโซลได้ที่ `http://localhost:9547` และเปิดดูเอกสาร Interactive Swagger ได้ที่ `http://localhost:9547/docs`
+
+---
+
+## 10. แผนการพัฒนาระบบ (Product Roadmap)
+
+### 🚨 ภารกิจเร่งด่วน (Urgent Priority)
+- **Database-Backed Rolling Window Rate Limiter (Multi-Container Safe):**
+  - พัฒนาระบบบันทึกและตรวจสอบ Rate Limit แบบ Rolling Window ลงในฐานข้อมูล SQLite WAL (`rate_limit_events`) เพื่อรองรับการรัน Thotsakan แบบ **Multi-Container (หลาย Instance บนเครื่องเดียวกันหรือข้ามเครื่องผ่าน Shared Volume)**
+  - **Zero Extra Infrastructure:** ไม่ต้องติดตั้ง Redis หรือ External Database เพิ่มเติม ยังคงรักษามาตรฐาน Single-Stack และ RAM ต่ำกว่า 40MB
+  - **รับประกันความปลอดภัย 100%:** ทุก Container จะแบ่งปันข้อมูลยอดส่งร่วมกันแบบ Realtime ทำให้ไม่มีทางส่งเกินขีดจำกัดของผู้ให้บริการภายนอก (AWS SES, Google Workspace, Microsoft 365, Resend ฯลฯ) เมื่อสเกลโหลดสูง

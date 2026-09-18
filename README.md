@@ -400,6 +400,20 @@ All dependencies and libraries utilized within Thotsakan Mail Engine have been t
 
 ---
 
+## 🗺️ Product Roadmap
+
+### 🚨 Urgent Priority (High Impact)
+- [ ] **Database-Backed Rolling Window Rate Limiter (Multi-Container Concurrency Safe):**
+  - ย้ายตัวนับความถี่ต่อนาที (Per-minute sliding window) จาก In-Memory ไปจัดเก็บลงบนตาราง `rate_limit_events` ใน SQLite WAL กลาง
+  - รองรับการรัน Thotsakan แบบ **Multi-Container Horizontal Scaling (2+ Instances)** บน Shared Volume โดย **Zero-Extra-DB (ไม่ต้องใช้ Redis/MySQL)**
+  - รับประกันความแม่นยำของ Rate Limit และ Quota 100% ป้องกันไม่ให้ส่งเกินเพดานที่ผู้ให้บริการกำหนด (เช่น AWS SES, Gmail, M365) เมื่อสเกลหลายตู้
+
+### 📌 Upcoming Enhancements
+- [ ] **Distributed Webhook Event Fanout:** รองรับการกระจาย Webhook ไปยังหลายปลายทางพร้อมกัน
+- [ ] **Dynamic Provider Health Scoring:** วิเคราะห์คะแนนสุขภาพของผู้ให้บริการแต่ละเจ้าแบบ Realtime เพื่อเลือกเส้นทางส่งที่เร็วที่สุดอัตโนมัติ
+
+---
+
 <div align="center">
   Maintained with ❤️ by <a href="https://github.com/thabot">thabot</a> & the Open Source Community
 </div>
