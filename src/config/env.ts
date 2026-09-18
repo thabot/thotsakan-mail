@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 export const envSchema = z.object({
-  PORT: z.coerce.number().default(3000),
+  PORT: z.coerce.number().default(9547),
+  SMTP_PORT: z.coerce.number().default(9548),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DB_PATH: z.string().default('data/thotsakan.db'),
   ENCRYPTION_KEY: z

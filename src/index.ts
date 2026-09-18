@@ -89,7 +89,8 @@ api.route('/', createTemplatesRoute(db));
 
 app.route('/', api);
 
-console.log(`🚀 Thotsakan Mail Engine running on port ${env.PORT}`);
+console.log(`🚀 Thotsakan Mail Engine HTTP API running on port ${env.PORT}`);
+console.log(`📬 Thotsakan Inbound SMTP Relay listening on port ${env.SMTP_PORT}`);
 
 export default {
   port: env.PORT,

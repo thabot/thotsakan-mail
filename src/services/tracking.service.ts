@@ -1,7 +1,7 @@
 export class TrackingService {
   private baseUrl: string;
 
-  constructor(customBaseUrl: string = 'http://localhost:3000') {
+  constructor(customBaseUrl: string = 'http://localhost:9547') {
     this.baseUrl = customBaseUrl.replace(/\/$/, '');
   }
 

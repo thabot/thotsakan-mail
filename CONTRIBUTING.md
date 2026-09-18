@@ -24,7 +24,7 @@ bun install
 cp .env.example .env
 bun run src/index.ts
 ```
-The server will boot on `http://localhost:3000` with the Web Console and Swagger API Docs (`/docs`).
+The server will boot on `http://localhost:9547` with the Web Console and Swagger API Docs (`/docs`).
 
 ---
 

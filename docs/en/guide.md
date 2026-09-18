@@ -5,7 +5,18 @@
 
 ---
 
-## 2. Quick AWS SES Setup in 3 Minutes
+## 2. Network Ports & Architecture (Port Roles)
+
+Thotsakan Mail Engine divides its network responsibilities across two dedicated ports for security, performance, and compatibility:
+
+| Port | Protocol | Service Type | Purpose & Capabilities |
+| :---: | :---: | :---: | :--- |
+| **`9547`** | **HTTP / REST** | **Management & API Engine** | • **REST API Endpoint (`/v1/emails/send`, `/v1/emails/batch`):** Modern microservices send transactional emails via JSON payloads.<br>• **Interactive Web Console (`/`):** Dashboard for onboarding, managing 10+ outbound providers, rules, and suppression lists.<br>• **Interactive Swagger Docs (`/docs` & `/openapi.json`):** OpenAPI 3.0 specification & interactive testing sandbox.<br>• **DevOps & Monitoring (`/healthz`):** Zero-overhead health check for Docker, Kubernetes, and load balancers.<br>• **Open & Click Tracking (`/v1/track/*`):** Transparent tracking pixel & link redirection proxy.<br>• **Webhook Ingestion (`/v1/webhooks/*`):** Ingest bounce and complaint notifications from external email providers. |
+| **`9548`** | **SMTP** | **Inbound SMTP Relay Bridge** | • **Local SMTP Server Bridge:** Accepts standard RFC822 MIME emails over SMTP protocol.<br>• **Legacy & Third-Party System Integration:** Allows apps without native HTTP API support (e.g., **WordPress, Laravel, Django, ERP, CRM, Printers, Scanners**) to connect.<br>• Simply configure Host: `localhost` (or server IP), Port: `9548`, with your API Key as password. The engine automatically parses and ingests messages into the priority failover queue. |
+
+---
+
+## 3. Quick AWS SES Setup in 3 Minutes
 1. **Create AWS IAM User:**
    - Go to AWS IAM Console -> Users -> Create User
    - Attach minimal permissions policy:
@@ -24,7 +35,7 @@
    - Generate `Access Key ID` and `Secret Access Key`.
 2. **Register Account in Thotsakan:**
    ```bash
-   curl -X POST http://localhost:3000/v1/accounts \
+   curl -X POST http://localhost:9547/v1/accounts \
      -H "Content-Type: application/json" \
      -H "X-API-Key: YOUR_API_KEY" \
      -d '{
@@ -39,7 +50,7 @@
      }'
    ```
 3. **Verify DNS in 1 Click:**
-   - Open Web Console at `http://localhost:3000/console`
+   - Open Web Console at `http://localhost:9547/console`
    - Switch to **"One-Click DNS Verify"** tab and verify your sender domain.
    - Copy SPF and DKIM tokens to Cloudflare or Route53.
 
@@ -49,7 +60,7 @@
 
 ### 3.1 Fast Asynchronous Enqueue (< 5ms)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -63,7 +74,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 3.2 High-Priority Synchronous Send (OTP)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -77,7 +88,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 3.3 Bulk Batch Dispatch (Up to 500 emails)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/batch \
+curl -X POST http://localhost:9547/v1/emails/batch \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -90,7 +101,7 @@ curl -X POST http://localhost:3000/v1/emails/batch \
 
 ### 3.4 Dispatch with Template & Dynamic Variables
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -112,7 +123,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 4.1 Create Template (`POST /v1/templates`)
 ```bash
-curl -X POST http://localhost:3000/v1/templates \
+curl -X POST http://localhost:9547/v1/templates \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -127,15 +138,15 @@ curl -X POST http://localhost:3000/v1/templates \
 ### 4.2 List or Retrieve Template (`GET /v1/templates`)
 ```bash
 # List all templates
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/templates
 
 # Retrieve single template
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates/invoice_receipt
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/templates/invoice_receipt
 ```
 
 ### 4.3 Update Template (`PUT /v1/templates/:code`)
 ```bash
-curl -X PUT http://localhost:3000/v1/templates/invoice_receipt \
+curl -X PUT http://localhost:9547/v1/templates/invoice_receipt \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -147,7 +158,7 @@ curl -X PUT http://localhost:3000/v1/templates/invoice_receipt \
 
 ### 4.4 Render Template Preview (`POST /v1/templates/:code/preview`)
 ```bash
-curl -X POST http://localhost:3000/v1/templates/invoice_receipt/preview \
+curl -X POST http://localhost:9547/v1/templates/invoice_receipt/preview \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -161,7 +172,7 @@ curl -X POST http://localhost:3000/v1/templates/invoice_receipt/preview \
 
 ### 4.5 Delete Template (`DELETE /v1/templates/:code`)
 ```bash
-curl -X DELETE http://localhost:3000/v1/templates/invoice_receipt \
+curl -X DELETE http://localhost:9547/v1/templates/invoice_receipt \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
@@ -173,7 +184,7 @@ Thotsakan allows connecting **multiple sender accounts concurrently** across 14 
 
 ### 5.1 Register Primary Account (e.g. AWS SES - 300/min, 50k/day)
 ```bash
-curl -X POST http://localhost:3000/v1/accounts \
+curl -X POST http://localhost:9547/v1/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -193,7 +204,7 @@ curl -X POST http://localhost:3000/v1/accounts \
 
 ### 5.2 Register Backup Account (e.g. Resend) with Failover Link
 ```bash
-curl -X POST http://localhost:3000/v1/accounts \
+curl -X POST http://localhost:9547/v1/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -211,10 +222,10 @@ curl -X POST http://localhost:3000/v1/accounts \
 ### 5.3 Inspect & Update Account Quotas (`PUT /v1/accounts/:id`)
 ```bash
 # List all accounts
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/accounts
 
 # Update limits and link fallback account
-curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
+curl -X PUT http://localhost:9547/v1/accounts/acc_123456 \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -232,7 +243,7 @@ Query transmission metrics, live backlog in the priority queue, failure counters
 
 ### 6.1 Aggregate Delivery Overview (`GET /v1/metrics/overview`)
 ```bash
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/metrics/overview
 ```
 **Sample Response:**
 ```json
@@ -258,15 +269,15 @@ curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
 ### 6.2 Filter Transmission Logs (`GET /v1/emails/logs`)
 ```bash
 # Get last 20 failed or throttled emails
-curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?status=FAILED&limit=20"
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:9547/v1/emails/logs?status=FAILED&limit=20"
 
 # Search dispatch history by recipient email
-curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipient=customer@domain.com"
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:9547/v1/emails/logs?recipient=customer@domain.com"
 ```
 
 ### 6.3 Prometheus Scrape Endpoint (`GET /metrics/prometheus`)
 ```bash
-curl http://localhost:3000/metrics/prometheus
+curl http://localhost:9547/metrics/prometheus
 ```
 
 ---
@@ -277,13 +288,13 @@ Every function available in the Web UI is 100% controllable programmatically via
 
 ### 7.1 Test Provider Connection (`POST /v1/accounts/:id/test`)
 ```bash
-curl -X POST http://localhost:3000/v1/accounts/acc_1742440000_abc/test \
+curl -X POST http://localhost:9547/v1/accounts/acc_1742440000_abc/test \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ### 7.2 Update Routing Rule (`PUT /v1/rules/:id`)
 ```bash
-curl -X PUT http://localhost:3000/v1/rules/rule_1742440000_xyz \
+curl -X PUT http://localhost:9547/v1/rules/rule_1742440000_xyz \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -294,33 +305,33 @@ curl -X PUT http://localhost:3000/v1/rules/rule_1742440000_xyz \
 
 ### 7.3 Check Single Email Suppression (`GET /v1/suppression/check/:email`)
 ```bash
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/suppression/check/customer@example.com
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/suppression/check/customer@example.com
 ```
 
 ### 7.4 Re-queue All Failed Jobs (`POST /v1/queue/retry-failed`)
 ```bash
-curl -X POST http://localhost:3000/v1/queue/retry-failed \
+curl -X POST http://localhost:9547/v1/queue/retry-failed \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ### 7.5 Purge Dead-Letter Queue (`POST /v1/queue/purge-dead`)
 ```bash
-curl -X POST http://localhost:3000/v1/queue/purge-dead \
+curl -X POST http://localhost:9547/v1/queue/purge-dead \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ---
 
-## 8. Run with Docker from GitHub Container Registry (GHCR)
+## 9. Run with Docker from GitHub Container Registry (GHCR)
 
 Run Thotsakan Mail Engine instantly with one command:
 ```bash
 docker run -d --name thotsakan \
-  -p 3000:3000 \
-  -p 2525:2525 \
+  -p 9547:9547 \
+  -p 9548:9548 \
   -v $(pwd)/data:/app/data \
   ghcr.io/thabot/thotsakan-mail:latest
 ```
-Access the Web Management Console at `http://localhost:3000` and interactive Swagger docs at `http://localhost:3000/docs`.
+Access the Web Management Console at `http://localhost:9547` and interactive Swagger docs at `http://localhost:9547/docs`.
 
 
