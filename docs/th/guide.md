@@ -342,3 +342,6 @@ docker run -d --name thotsakan \
   - พัฒนาระบบบันทึกและตรวจสอบ Rate Limit แบบ Rolling Window ลงในฐานข้อมูล SQLite WAL (`rate_limit_events`) เพื่อรองรับการรัน Thotsakan แบบ **Multi-Container (หลาย Instance บนเครื่องเดียวกันหรือข้ามเครื่องผ่าน Shared Volume)**
   - **Zero Extra Infrastructure:** ไม่ต้องติดตั้ง Redis หรือ External Database เพิ่มเติม ยังคงรักษามาตรฐาน Single-Stack และ RAM ต่ำกว่า 40MB
   - **รับประกันความปลอดภัย 100%:** ทุก Container จะแบ่งปันข้อมูลยอดส่งร่วมกันแบบ Realtime ทำให้ไม่มีทางส่งเกินขีดจำกัดของผู้ให้บริการภายนอก (AWS SES, Google Workspace, Microsoft 365, Resend ฯลฯ) เมื่อสเกลโหลดสูง
+- **Hybrid License Enforcement Model (Machine Fingerprint Binding & Policy):**
+  - **การล็อกสิทธิ์ทางเทคนิค (Technical Enforcement):** พัฒนาระบบสร้าง Machine / Hardware Fingerprint จาก Hardware ID / Host UUID และบันทึก `allowed_machine_id` หรือ `instance_limit` ลงใน Ed25519 Cryptographic Token ป้องกันการคัดลอกไฟล์ `.env` หรือ License Key ไปรันเครื่องอื่นโดยไม่ได้รับอนุญาต (ทำงานแบบ Offline 100% ปลอดภัยต่อเครือข่าย Air-gapped)
+  - **ข้อกำหนดทางสัญญาและการค้า (Commercial Terms):** กำหนดเงื่อนไขชัดเจน 1 License = 1 Production Node (+1 UAT Staging Node) พร้อมแพ็กเกจ Enterprise Multi-Node Expansion เพื่อสร้างรายได้ต่อเนื่องจากการขยายคลัสเตอร์ของลูกค้า

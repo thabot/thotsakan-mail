@@ -407,6 +407,9 @@ All dependencies and libraries utilized within Thotsakan Mail Engine have been t
   - ย้ายตัวนับความถี่ต่อนาที (Per-minute sliding window) จาก In-Memory ไปจัดเก็บลงบนตาราง `rate_limit_events` ใน SQLite WAL กลาง
   - รองรับการรัน Thotsakan แบบ **Multi-Container Horizontal Scaling (2+ Instances)** บน Shared Volume โดย **Zero-Extra-DB (ไม่ต้องใช้ Redis/MySQL)**
   - รับประกันความแม่นยำของ Rate Limit และ Quota 100% ป้องกันไม่ให้ส่งเกินเพดานที่ผู้ให้บริการกำหนด (เช่น AWS SES, Gmail, M365) เมื่อสเกลหลายตู้
+- [ ] **Hybrid License Enforcement Model (Machine Fingerprint Binding & License Terms):**
+  - **เชิงเทคนิค (Technical Enforcement):** พัฒนาระบบ Machine / Hardware Fingerprint Generator (ดึง CPU Hash + Host UUID) และฝัง `allowed_machine_id` หรือ `instance_limit` ลงใน Ed25519 Token ป้องกันการคัดลอก License Key ไปรันข้ามเครื่องโดยไม่ได้รับอนุญาต ทำงานได้ทั้งแบบ Offline 100% (Air-gapped) และรองรับ Node Add-on
+  - **เชิงข้อกำหนดสัญญา (License Terms & Policy):** กำหนดเงื่อนไขสิทธิ์ 1 License = 1 Production Node (+1 UAT/Staging) พร้อมแพ็กเกจ Enterprise Multi-Node Expansion รองรับการขายแบบ Scale-out Cluster
 
 ### 📌 Upcoming Enhancements
 - [ ] **Distributed Webhook Event Fanout:** รองรับการกระจาย Webhook ไปยังหลายปลายทางพร้อมกัน
