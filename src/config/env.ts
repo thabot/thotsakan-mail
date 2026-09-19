@@ -11,6 +11,11 @@ export const envSchema = z.object({
     .regex(/^[0-9a-fA-F]+$/, 'ENCRYPTION_KEY must contain only hexadecimal characters')
     .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
   LICENSE_KEY: z.string().optional(),
+  THOTSAKAN_EMERGENCY_OVERRIDE: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true' || val === '1'),
+  THOTSAKAN_EMERGENCY_REASON: z.string().optional(),
   DEAD_LETTER_WEBHOOK_URL: z.string().url().optional().or(z.literal('')),
   LOG_RETENTION_DAYS: z.coerce.number().default(90),
 });

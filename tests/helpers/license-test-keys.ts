@@ -18,6 +18,10 @@ export async function createSignedTestLicense(
     tenants_limit?: number;
     accounts_limit?: number;
     features?: string[];
+    allowed_machine_id?: string;
+    allowed_machine_ids?: string[];
+    instance_limit?: number;
+    environment?: 'production' | 'staging' | 'development' | 'any';
   },
   expiresIn: string = '30d'
 ) {
