@@ -16,15 +16,16 @@ COPY . .
 RUN mkdir -p /app/data /app/data/backups
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=9547
+ENV SMTP_PORT=9548
 ENV DB_PATH=/app/data/thotsakan.db
 
-# Expose HTTP API/Web UI (3000) and Inbound SMTP Relay (2525)
-EXPOSE 3000 2525
+# Expose HTTP API/Web UI (9547) and Inbound SMTP Relay (9548)
+EXPOSE 9547 9548
 
 # Container Healthcheck verifying /healthz endpoint
 HEALTHCHECK --interval=20s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/healthz || exit 1
+  CMD curl -f http://localhost:9547/healthz || exit 1
 
 VOLUME ["/app/data"]
 

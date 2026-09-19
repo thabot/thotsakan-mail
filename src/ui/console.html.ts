@@ -132,6 +132,9 @@ export function renderWebUI(): string {
       <button onclick="switchTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap">
         <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Dispatch Logs
       </button>
+      <button onclick="switchTab('license')" id="tab-btn-license" class="px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap">
+        <i class="fa-solid fa-id-card-clip mr-1.5"></i> License & Node Identity
+      </button>
     </div>
 
     <!-- TAB 1: Quick Send Playground -->
@@ -363,7 +366,69 @@ export function renderWebUI(): string {
         </table>
       </div>
     </section>
+
+    <!-- TAB 7: License & Node Identity -->
+    <section id="view-license" class="hidden glass p-6 rounded-2xl space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved text-indigo-400"></i> Hybrid License & Node Identity
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Cryptographic Ed25519 Hardware-Bound License & Disaster Recovery Control</p>
+        </div>
+        <button onclick="loadLicenseInfo()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-arrows-rotate"></i> Refresh
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Active Entitlement Tier</div>
+          <div class="text-2xl font-black text-indigo-400" id="lic-tier">--</div>
+          <div class="text-xs text-slate-500 mt-1" id="lic-status-badge">Status: --</div>
+        </div>
+        <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Machine Hardware Binding</div>
+          <div class="text-2xl font-black text-emerald-400" id="lic-binding">--</div>
+          <div class="text-xs text-slate-500 mt-1" id="lic-binding-sub">Verified against hardware digest</div>
+        </div>
+        <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Cluster Node Capacity</div>
+          <div class="text-2xl font-black text-amber-400" id="lic-nodes">--</div>
+          <div class="text-xs text-slate-500 mt-1">Coordinated via SQLite WAL</div>
+        </div>
+      </div>
+
+      <!-- Machine ID Card -->
+      <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-3">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Current Node Machine ID</div>
+            <div class="text-xs text-slate-500">Provide this deterministic Machine ID to request a signed enterprise license</div>
+          </div>
+          <button onclick="copyMachineId()" class="text-xs px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition flex items-center gap-1.5 self-start md:self-auto font-semibold">
+            <i class="fa-solid fa-copy"></i> Copy Machine ID
+          </button>
+        </div>
+        <div class="bg-slate-900 px-4 py-3 rounded-lg border border-slate-800 font-mono text-sm text-indigo-300 select-all" id="lic-machine-id">
+          loading...
+        </div>
+      </div>
+
+      <!-- Activate Key Form -->
+      <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-3">
+        <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Apply / Activate License Key</div>
+        <div class="text-xs text-slate-500">Paste your signed Ed25519 JWT license token to activate PRO or ENTERPRISE features instantly without restarting</div>
+        <div class="flex flex-col md:flex-row gap-2">
+          <input type="text" id="lic-input-key" placeholder="eyJhbGciOiJFZERTQSI..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-500">
+          <button onclick="activateLicenseKey()" class="text-xs px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition font-semibold flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-key"></i> Activate Key
+          </button>
+        </div>
+      </div>
+    </section>
   </main>
+
 
   <script>
     function getAuthHeaders() {
@@ -586,8 +651,56 @@ export function renderWebUI(): string {
       document.getElementById('dns-results').classList.remove('hidden');
     }
 
+    async function loadLicenseInfo() {
+      try {
+        const res = await fetch('/v1/license/status');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('lic-tier').textContent = data.tier;
+          document.getElementById('lic-status-badge').textContent = 'Status: ' + data.status;
+          
+          if (data.machine) {
+            document.getElementById('lic-machine-id').textContent = data.machine.machine_id;
+            document.getElementById('lic-binding').textContent = data.machine.is_bound ? (data.machine.is_valid ? 'Locked & Verified' : 'Mismatch') : 'Unrestricted';
+            document.getElementById('lic-binding-sub').textContent = data.machine.is_bound ? (data.machine.is_valid ? 'Hardware digest matches active license' : 'Machine digest does not match!') : 'License valid on any host node';
+            document.getElementById('lic-nodes').textContent = (data.machine.instance_limit || 1) + ' Node(s)';
+          }
+        }
+      } catch (e) {}
+    }
+
+    function copyMachineId() {
+      const text = document.getElementById('lic-machine-id').textContent.trim();
+      navigator.clipboard.writeText(text);
+      alert('Machine ID copied to clipboard: ' + text);
+    }
+
+    async function activateLicenseKey() {
+      const key = document.getElementById('lic-input-key').value.trim();
+      if (!key) {
+        alert('Please paste a license key token');
+        return;
+      }
+      try {
+        const res = await fetch('/v1/license/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ license_key: key })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('🎉 License Activated Successfully! Tier: ' + data.result.tier);
+          loadLicenseInfo();
+        } else {
+          alert('❌ License activation failed: ' + (data.error || 'Invalid or expired key'));
+        }
+      } catch (err) {
+        alert('Activation failed: ' + err.message);
+      }
+    }
+
     function switchTab(tab) {
-      ['quick-send', 'accounts', 'rules', 'suppression', 'dns-verify', 'logs'].forEach(t => {
+      ['quick-send', 'accounts', 'rules', 'suppression', 'dns-verify', 'logs', 'license'].forEach(t => {
         document.getElementById('view-' + t).classList.add('hidden');
         document.getElementById('tab-btn-' + t).className = 'px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap';
       });
@@ -598,7 +711,9 @@ export function renderWebUI(): string {
       if (tab === 'accounts') loadAccounts();
       if (tab === 'rules') loadRules();
       if (tab === 'suppression') loadSuppression();
+      if (tab === 'license') loadLicenseInfo();
     }
+
 
     fetchStats();
     setInterval(fetchStats, 5000);

@@ -123,3 +123,22 @@ CREATE INDEX IF NOT EXISTS idx_suppression
 CREATE INDEX IF NOT EXISTS idx_routing_rules_tenant 
   ON routing_rules(tenant_id, priority DESC);
 
+-- System Metadata (Clock Tampering Protection & Operational State)
+CREATE TABLE IF NOT EXISTS system_metadata (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Cluster Nodes (Multi-Node Coordination & Heartbeats)
+CREATE TABLE IF NOT EXISTS cluster_nodes (
+  machine_id TEXT PRIMARY KEY,
+  hostname TEXT NOT NULL,
+  ip_address TEXT,
+  pid INTEGER NOT NULL,
+  first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_heartbeat_at TEXT NOT NULL DEFAULT (datetime('now')),
+  is_active INTEGER NOT NULL DEFAULT 1
+);
+
+

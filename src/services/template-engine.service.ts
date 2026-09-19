@@ -36,11 +36,23 @@ export class TemplateEngineService {
       }).join('');
     });
 
-    // Handle simple {{key}}
+    // Handle simple {{key}} (Double Curly Brackets)
     rendered = rendered.replace(/\{\{([\w.]+)\}\}/g, (_, key) => {
       const val = this.getNestedValue(data, key.trim());
       return val !== undefined && val !== null ? String(val) : '';
     });
+
+    // Handle single {key} (Single Curly Bracket for legacy templates)
+    // Only match known keys provided in `data` to avoid corrupting CSS styles like {width:100%;}
+    for (const key of Object.keys(data)) {
+      if (/^[\w.]+$/.test(key)) {
+        const val = this.getNestedValue(data, key);
+        if (val !== undefined && val !== null) {
+          const regex = new RegExp(`\\{${key}\\}`, 'g');
+          rendered = rendered.replace(regex, String(val));
+        }
+      }
+    }
 
     return rendered;
   }

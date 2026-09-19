@@ -52,12 +52,18 @@ Why high-growth engineering teams choose Thotsakan Mail Engine over monolithic n
 ### Option 1: One-Liner Docker Run (Production Ready)
 ```bash
 docker run -d --name thotsakan \
-  -p 3000:3000 \
-  -p 2525:2525 \
+  -p 9547:9547 \
+  -p 9548:9548 \
   -v $(pwd)/data:/app/data \
   ghcr.io/thabot/thotsakan-mail:latest
 ```
-Access the **Web Console** at `http://localhost:3000` and **Interactive Swagger API Docs** at `http://localhost:3000/docs`.
+Access the **Web Console** at `http://localhost:9547` and **Interactive Swagger API Docs** at `http://localhost:9547/docs`.
+
+### 🌐 Network Ports Architecture
+| Port | Protocol | Purpose & Description |
+| :---: | :---: | :--- |
+| **`9547`** | **HTTP** | **Management & REST API Engine:** REST API endpoints (`/v1/emails/send`), Web Console (`/`), Swagger UI (`/docs`), Healthcheck (`/healthz`), Tracking & Webhooks. |
+| **`9548`** | **SMTP** | **Inbound SMTP Relay Bridge:** Local RFC822 MIME SMTP server for legacy integrations (**WordPress, Laravel, Django, ERP, CRM, Scanners**). |
 
 ### Option 2: Run with Docker Compose
 ```bash
@@ -86,7 +92,7 @@ bun run dev
 
 ### 1. Asynchronous Enqueue (< 5ms response)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -100,7 +106,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 2. High-Priority Synchronous Send (Instant OTP)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -114,7 +120,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 3. Bulk Batch Dispatch (Up to 500 emails per request)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/batch \
+curl -X POST http://localhost:9547/v1/emails/batch \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -128,7 +134,7 @@ curl -X POST http://localhost:3000/v1/emails/batch \
 ### 4. Dispatch Email with Dynamic Template
 Send personalized emails by specifying `templateCode` and dynamic variables in `templateData`:
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -156,7 +162,7 @@ Thotsakan includes a responsive template engine supporting Handlebars variable i
 
 ### 1. Create a Template (`POST /v1/templates`)
 ```bash
-curl -X POST http://localhost:3000/v1/templates \
+curl -X POST http://localhost:9547/v1/templates \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -171,15 +177,15 @@ curl -X POST http://localhost:3000/v1/templates \
 ### 2. Get / List Templates (`GET /v1/templates`)
 ```bash
 # List all templates
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/templates
 
 # Get single template by code
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates/order_receipt
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/templates/order_receipt
 ```
 
 ### 3. Update a Template (`PUT /v1/templates/:code`)
 ```bash
-curl -X PUT http://localhost:3000/v1/templates/order_receipt \
+curl -X PUT http://localhost:9547/v1/templates/order_receipt \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -191,7 +197,7 @@ curl -X PUT http://localhost:3000/v1/templates/order_receipt \
 
 ### 4. Preview Template with Mock Data (`POST /v1/templates/:code/preview`)
 ```bash
-curl -X POST http://localhost:3000/v1/templates/order_receipt/preview \
+curl -X POST http://localhost:9547/v1/templates/order_receipt/preview \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -205,7 +211,7 @@ curl -X POST http://localhost:3000/v1/templates/order_receipt/preview \
 
 ### 5. Delete a Template (`DELETE /v1/templates/:code`)
 ```bash
-curl -X DELETE http://localhost:3000/v1/templates/order_receipt \
+curl -X DELETE http://localhost:9547/v1/templates/order_receipt \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
@@ -217,7 +223,7 @@ Thotsakan supports connecting **multiple sender accounts simultaneously** across
 
 ### 1. Register Primary Sender (e.g. AWS SES - 300/min, 50k/day)
 ```bash
-curl -X POST http://localhost:3000/v1/accounts \
+curl -X POST http://localhost:9547/v1/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -238,7 +244,7 @@ curl -X POST http://localhost:3000/v1/accounts \
 ### 2. Register Backup Sender (e.g. Resend / Postmark / M365 Failover)
 Configure a backup account and link it as `fallbackAccountId`:
 ```bash
-curl -X POST http://localhost:3000/v1/accounts \
+curl -X POST http://localhost:9547/v1/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -256,15 +262,15 @@ curl -X POST http://localhost:3000/v1/accounts \
 ### 3. List & Inspect Connected Accounts
 ```bash
 # List all registered accounts
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/accounts
 
 # Get single account by ID (credentials returned as [ENCRYPTED])
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts/acc_123456
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/accounts/acc_123456
 ```
 
 ### 4. Update Rate Limits, Daily Quotas, or Failover Link (`PUT /v1/accounts/:id`)
 ```bash
-curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
+curl -X PUT http://localhost:9547/v1/accounts/acc_123456 \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -283,7 +289,7 @@ Check delivery metrics, queue backlog, failure rates, and granular transmission 
 ### 1. Delivery Overview Metrics (`GET /v1/metrics/overview`)
 Inspect total processed, pending/in-queue backlog, successful sends, throttled, and failed counts:
 ```bash
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/metrics/overview
 ```
 **Response:**
 ```json
@@ -304,16 +310,16 @@ curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
 Filter logs by status (`SENT`, `PENDING`, `FAILED`, `THROTTLED`, `SUPPRESSED`) or search by recipient:
 ```bash
 # Get last 20 failed or throttled emails
-curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?status=FAILED&limit=20"
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:9547/v1/emails/logs?status=FAILED&limit=20"
 
 # Search dispatch history for a specific recipient
-curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipient=customer@domain.com"
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:9547/v1/emails/logs?recipient=customer@domain.com"
 ```
 
 ### 3. Prometheus Metrics Endpoint (`GET /metrics/prometheus`)
 Scrape live gauge and counter metrics for Grafana / Prometheus monitoring:
 ```bash
-curl http://localhost:3000/metrics/prometheus
+curl http://localhost:9547/metrics/prometheus
 ```
 
 ---
@@ -391,6 +397,23 @@ All dependencies and libraries utilized within Thotsakan Mail Engine have been t
 | **Official Provider SDKs** | AWS SES, MSAL, Google APIs, Resend | **Apache-2.0 / MIT** | 🟢 Official Cloud Provider SDKs |
 
 > 🔒 **Zero Copyleft Contamination:** None of the internal microservice libraries use copyleft licenses (GPL/LGPL). Organizations can safely deploy and distribute commercial extensions without IP risk.
+
+---
+
+## 🗺️ Product Roadmap
+
+### 🚨 Urgent Priority (High Impact)
+- [ ] **Database-Backed Rolling Window Rate Limiter (Multi-Container Concurrency Safe):**
+  - ย้ายตัวนับความถี่ต่อนาที (Per-minute sliding window) จาก In-Memory ไปจัดเก็บลงบนตาราง `rate_limit_events` ใน SQLite WAL กลาง
+  - รองรับการรัน Thotsakan แบบ **Multi-Container Horizontal Scaling (2+ Instances)** บน Shared Volume โดย **Zero-Extra-DB (ไม่ต้องใช้ Redis/MySQL)**
+  - รับประกันความแม่นยำของ Rate Limit และ Quota 100% ป้องกันไม่ให้ส่งเกินเพดานที่ผู้ให้บริการกำหนด (เช่น AWS SES, Gmail, M365) เมื่อสเกลหลายตู้
+- [x] **Hybrid License Enforcement Model (Machine Fingerprint Binding & License Terms):**
+  - **เชิงเทคนิค (Technical Enforcement):** พัฒนาระบบ Machine / Hardware Fingerprint Generator (ดึง CPU Hash + Host UUID) และฝัง `allowed_machine_id` หรือ `instance_limit` ลงใน Ed25519 Token ป้องกันการคัดลอก License Key ไปรันข้ามเครื่องโดยไม่ได้รับอนุญาต ทำงานได้ทั้งแบบ Offline 100% (Air-gapped) และรองรับ Node Add-on พร้อมระบบ Clock-tampering และ Break-glass 72h DR mode
+  - **เชิงข้อกำหนดสัญญา (License Terms & Policy):** กำหนดเงื่อนไขสิทธิ์ 1 License = 1 Production Node (+1 UAT/Staging) พร้อมแพ็กเกจ Enterprise Multi-Node Expansion รองรับการขายแบบ Scale-out Cluster
+
+### 📌 Upcoming Enhancements
+- [ ] **Distributed Webhook Event Fanout:** รองรับการกระจาย Webhook ไปยังหลายปลายทางพร้อมกัน
+- [ ] **Dynamic Provider Health Scoring:** วิเคราะห์คะแนนสุขภาพของผู้ให้บริการแต่ละเจ้าแบบ Realtime เพื่อเลือกเส้นทางส่งที่เร็วที่สุดอัตโนมัติ
 
 ---
 

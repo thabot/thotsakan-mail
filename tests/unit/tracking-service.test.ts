@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { TrackingService } from '../../src/services/tracking.service.js';
 
 describe('Unit: TrackingService (Open & Click Tracking)', () => {
-  const tracking = new TrackingService('http://localhost:3000');
+  const tracking = new TrackingService('http://localhost:9547');
 
   it('should inject 1x1 transparent open pixel before </body> tag', () => {
     const html = '<html><body><h1>Hello</h1></body></html>';

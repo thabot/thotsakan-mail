@@ -5,18 +5,19 @@ services:
     container_name: thotsakan-mail-engine
     restart: unless-stopped
     ports:
-      - "3000:3000"
-      - "2525:2525"
+      - "9547:9547"
+      - "9548:9548"
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=9547
+      - SMTP_PORT=9548
       - DB_PATH=/app/data/thotsakan.db
       - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       - LOG_RETENTION_DAYS=90
     volumes:
       - thotsakan_data:/app/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/healthz || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9547/healthz || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

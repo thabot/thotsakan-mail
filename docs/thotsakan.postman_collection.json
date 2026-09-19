@@ -13,7 +13,7 @@
     ]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "baseUrl", "value": "http://localhost:9547" },
     { "key": "apiKey", "value": "thk_live_demo_key" }
   ],
   "item": [

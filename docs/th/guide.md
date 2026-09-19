@@ -5,7 +5,18 @@
 
 ---
 
-## 2. เริ่มต้นเชื่อมต่อ AWS SES ภายใน 3 นาที (3-Minute AWS SES Setup)
+## 2. ตารางหมายเลข Port และหน้าที่การทำงาน (Network Ports & Roles)
+
+Thotsakan Mail Engine แยกพอร์ตการทำงานออกเป็น 2 พอร์ตหลัก เพื่อความปลอดภัย ประสิทธิภาพ และรองรับสถาปัตยกรรมทั้งสมัยใหม่และระบบเดิม:
+
+| พอร์ต (Port) | โพรโทคอล | ประเภทบริการ | หน้าที่และการทำงาน (Purpose & Capabilities) |
+| :---: | :---: | :---: | :--- |
+| **`9547`** | **HTTP / REST** | **Management & API Engine** | • **REST API Endpoint (`/v1/emails/send`, `/v1/emails/batch`):** สำหรับแอปพลิเคชันยุคใหม่ยิงส่งอีเมลผ่าน JSON Payload<br>• **Interactive Web Console (`/`):** หน้าแดชบอร์ดจัดการ Onboarding Wizard, จัดการ 10 Providers, Routing Rules และ Suppression List<br>• **Interactive Swagger Documentation (`/docs` & `/openapi.json`):** หน้าทดสอบและอ่าน API Spec ตามมาตรฐาน OpenAPI 3.0<br>• **DevOps & Monitoring (`/healthz`):** Endpoint เช็คสถานะ Container และ Database Connection สำหรับ Docker / K8s Health Check<br>• **Open & Click Tracking (`/v1/track/*`):** รับพิกเซลตรวจสอบการเปิดอ่านและลิงก์คลิกส่งต่อ<br>• **Webhook Ingestion (`/v1/webhooks/*`):** รับ Event Bounce/Complaint จากผู้ให้บริการคลาวด์ภายนอก |
+| **`9548`** | **SMTP** | **Inbound SMTP Relay Bridge** | • **Local SMTP Server Bridge:** ทำหน้าที่เป็นตัวรับส่งอีเมลมาตรฐาน SMTP Protocol (RFC822 MIME)<br>• **Legacy & Third-Party System Integration:** สำหรับเชื่อมต่อโปรแกรมเดิมหรือเฟรมเวิร์กที่ไม่รองรับ HTTP API เช่น **WordPress, Laravel Mail, Django, ERP, CRM, Printers, Scanners**<br>• เพียงตั้งค่า Host: `localhost` (หรือ IP เซิร์ฟเวอร์) และ Port: `9548` พร้อมระบุ API Key เป็นรหัสผ่าน อีเมลจะถูกดึงเข้าสู่ระบบคิวอัจฉริยะของทศกัณฐ์และกระจายส่งต่ออัตโนมัติทันที |
+
+---
+
+## 3. เริ่มต้นเชื่อมต่อ AWS SES ภายใน 3 นาที (3-Minute AWS SES Setup)
 1. **สร้าง IAM User บน AWS Console:**
    - ไปที่ AWS IAM -> Users -> Create User (เช่น `thotsakan-mailer`)
    - กำหนดสิทธิ์ Inline Policy ขั้นต่ำ:
@@ -24,7 +35,7 @@
    - สร้าง `Access Key` และ `Secret Access Key`
 2. **สร้างบัญชีผู้ส่งใน Thotsakan ผ่าน API:**
    ```bash
-   curl -X POST http://localhost:3000/v1/accounts \
+   curl -X POST http://localhost:9547/v1/accounts \
      -H "Content-Type: application/json" \
      -H "X-API-Key: YOUR_API_KEY" \
      -d '{
@@ -39,7 +50,7 @@
      }'
    ```
 3. **ตรวจสอบ DNS และตั้งค่า DKIM/SPF:**
-   - เข้าหน้า Web Console ที่ `http://localhost:3000/console`
+   - เข้าหน้า Web Console ที่ `http://localhost:9547/console`
    - เลือกแถบ **"One-Click DNS Verify"** แล้วพิมพ์ชื่อโดเมนของคุณ
    - นำค่า SPF/DKIM CNAME ที่ระบบแสดงไปใส่ใน Cloudflare / ผู้ให้บริการ DNS ของคุณ
 
@@ -49,7 +60,7 @@
 
 ### 3.1 ส่งแบบ Asynchronous เข้าคิวความเร็วสูง (< 5ms)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -63,7 +74,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 3.2 ส่งแบบ Synchronous ส่งทันทีสำหรับรหัส OTP (High Priority)
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -77,7 +88,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 3.3 ส่งแบบ Batch สูงสุด 500 ฉบับพร้อมกัน
 ```bash
-curl -X POST http://localhost:3000/v1/emails/batch \
+curl -X POST http://localhost:9547/v1/emails/batch \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -91,7 +102,7 @@ curl -X POST http://localhost:3000/v1/emails/batch \
 ### 3.4 ส่งอีเมลโดยระบุ Template (Dynamic Variables)
 ส่งอีเมลโดยระบุรหัสเทมเพลต `templateCode` และตัวแปรใน `templateData`:
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -112,7 +123,7 @@ curl -X POST http://localhost:3000/v1/emails/send \
 
 ### 4.1 สร้าง Template ใหม่ (`POST /v1/templates`)
 ```bash
-curl -X POST http://localhost:3000/v1/templates \
+curl -X POST http://localhost:9547/v1/templates \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -127,15 +138,15 @@ curl -X POST http://localhost:3000/v1/templates \
 ### 4.2 เรียกดูรายการ Template ทั้งหมดหรือรายตัว (`GET /v1/templates`)
 ```bash
 # รายการทั้งหมด
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/templates
 
 # รายการเฉพาะรหัส
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/templates/welcome_member
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/templates/welcome_member
 ```
 
 ### 4.3 แก้ไข Template (`PUT /v1/templates/:code`)
 ```bash
-curl -X PUT http://localhost:3000/v1/templates/welcome_member \
+curl -X PUT http://localhost:9547/v1/templates/welcome_member \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -147,7 +158,7 @@ curl -X PUT http://localhost:3000/v1/templates/welcome_member \
 
 ### 4.4 ทดสอบเรนเดอร์ Template (Preview Data)
 ```bash
-curl -X POST http://localhost:3000/v1/templates/welcome_member/preview \
+curl -X POST http://localhost:9547/v1/templates/welcome_member/preview \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -160,7 +171,7 @@ curl -X POST http://localhost:3000/v1/templates/welcome_member/preview \
 
 ### 4.5 ลบ Template (`DELETE /v1/templates/:code`)
 ```bash
-curl -X DELETE http://localhost:3000/v1/templates/welcome_member \
+curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
@@ -172,7 +183,7 @@ curl -X DELETE http://localhost:3000/v1/templates/welcome_member \
 
 ### 5.1 เชื่อมต่อบัญชีหลัก (เช่น AWS SES - สูงสุด 300 ฉบับ/นาที, 50,000 ฉบับ/วัน)
 ```bash
-curl -X POST http://localhost:3000/v1/accounts \
+curl -X POST http://localhost:9547/v1/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -192,7 +203,7 @@ curl -X POST http://localhost:3000/v1/accounts \
 
 ### 5.2 เชื่อมต่อบัญชีสำรอง (เช่น Resend หรือ M365) พร้อมผูกเป็น Fallback
 ```bash
-curl -X POST http://localhost:3000/v1/accounts \
+curl -X POST http://localhost:9547/v1/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -210,10 +221,10 @@ curl -X POST http://localhost:3000/v1/accounts \
 ### 5.3 ดูรายการและอัปเดตโควตาเพดานการส่ง (`PUT /v1/accounts/:id`)
 ```bash
 # เรียกดูบัญชีทั้งหมด
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/accounts
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/accounts
 
 # ปรับเพดานส่งเป็น 600 ฉบับ/นาที และ 100,000 ฉบับ/วัน
-curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
+curl -X PUT http://localhost:9547/v1/accounts/acc_123456 \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -231,7 +242,7 @@ curl -X PUT http://localhost:3000/v1/accounts/acc_123456 \
 
 ### 6.1 สรุปภาพรวมการส่งทั้งหมด (`GET /v1/metrics/overview`)
 ```bash
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/metrics/overview
 ```
 **ตัวอย่างผลลัพธ์ (JSON Response):**
 ```json
@@ -257,15 +268,15 @@ curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/metrics/overview
 ### 6.2 ตรวจสอบประวัติ Log การส่งแยกตามสถานะ (`GET /v1/emails/logs`)
 ```bash
 # ดูรายการเมลที่ส่งไม่สำเร็จ 20 ฉบับล่าสุด
-curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?status=FAILED&limit=20"
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:9547/v1/emails/logs?status=FAILED&limit=20"
 
 # ค้นหาประวัติการส่งตามอีเมลปลายทาง
-curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:3000/v1/emails/logs?recipient=customer@domain.com"
+curl -H "X-API-Key: YOUR_API_KEY" "http://localhost:9547/v1/emails/logs?recipient=customer@domain.com"
 ```
 
 ### 6.3 ดึง Metrics ไปยัง Grafana / Prometheus (`GET /metrics/prometheus`)
 ```bash
-curl http://localhost:3000/metrics/prometheus
+curl http://localhost:9547/metrics/prometheus
 ```
 
 ---
@@ -276,13 +287,13 @@ curl http://localhost:3000/metrics/prometheus
 
 ### 7.1 ทดสอบการเชื่อมต่อบัญชีผู้ส่ง (`POST /v1/accounts/:id/test`)
 ```bash
-curl -X POST http://localhost:3000/v1/accounts/acc_1742440000_abc/test \
+curl -X POST http://localhost:9547/v1/accounts/acc_1742440000_abc/test \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ### 7.2 แก้ไขกฎ Dynamic Routing (`PUT /v1/rules/:id`)
 ```bash
-curl -X PUT http://localhost:3000/v1/rules/rule_1742440000_xyz \
+curl -X PUT http://localhost:9547/v1/rules/rule_1742440000_xyz \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -293,31 +304,45 @@ curl -X PUT http://localhost:3000/v1/rules/rule_1742440000_xyz \
 
 ### 7.3 ตรวจสอบสถานะการบล็อกอีเมลเดี่ยว (`GET /v1/suppression/check/:email`)
 ```bash
-curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/v1/suppression/check/customer@example.com
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/suppression/check/customer@example.com
 ```
 
 ### 7.4 สั่ง Re-queue อีเมลที่ล้มเหลวเพื่อส่งใหม่ทั้งหมด (`POST /v1/queue/retry-failed`)
 ```bash
-curl -X POST http://localhost:3000/v1/queue/retry-failed \
+curl -X POST http://localhost:9547/v1/queue/retry-failed \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ### 7.5 สั่งล้างคิวอีเมลที่ตายถาวร (`POST /v1/queue/purge-dead`)
 ```bash
-curl -X POST http://localhost:3000/v1/queue/purge-dead \
+curl -X POST http://localhost:9547/v1/queue/purge-dead \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
 ---
 
-## 8. การรันด้วย Docker Image จาก GitHub Container Registry (GHCR)
+## 9. การรันด้วย Docker Image จาก GitHub Container Registry (GHCR)
 
 สามารถรัน Thotsakan ได้ทันทีด้วยคำสั่งบรรทัดเดียว:
 ```bash
 docker run -d --name thotsakan \
-  -p 3000:3000 \
-  -p 2525:2525 \
+  -p 9547:9547 \
+  -p 9548:9548 \
   -v $(pwd)/data:/app/data \
   ghcr.io/thabot/thotsakan-mail:latest
 ```
-เมื่อรันเสร็จ เปิดหน้าเว็บคอนโซลได้ที่ `http://localhost:3000` และเปิดดูเอกสาร Interactive Swagger ได้ที่ `http://localhost:3000/docs`
+เมื่อรันเสร็จ เปิดหน้าเว็บคอนโซลได้ที่ `http://localhost:9547` และเปิดดูเอกสาร Interactive Swagger ได้ที่ `http://localhost:9547/docs`
+
+---
+
+## 10. แผนการพัฒนาระบบ (Product Roadmap)
+
+### 🚨 ภารกิจเร่งด่วน (Urgent Priority)
+- **Database-Backed Rolling Window Rate Limiter (Multi-Container Safe):**
+  - พัฒนาระบบบันทึกและตรวจสอบ Rate Limit แบบ Rolling Window ลงในฐานข้อมูล SQLite WAL (`rate_limit_events`) เพื่อรองรับการรัน Thotsakan แบบ **Multi-Container (หลาย Instance บนเครื่องเดียวกันหรือข้ามเครื่องผ่าน Shared Volume)**
+  - **Zero Extra Infrastructure:** ไม่ต้องติดตั้ง Redis หรือ External Database เพิ่มเติม ยังคงรักษามาตรฐาน Single-Stack และ RAM ต่ำกว่า 40MB
+  - **รับประกันความปลอดภัย 100%:** ทุก Container จะแบ่งปันข้อมูลยอดส่งร่วมกันแบบ Realtime ทำให้ไม่มีทางส่งเกินขีดจำกัดของผู้ให้บริการภายนอก (AWS SES, Google Workspace, Microsoft 365, Resend ฯลฯ) เมื่อสเกลโหลดสูง
+- **[เสร็จสมบูรณ์แล้ว] Hybrid License Enforcement Model (Machine Fingerprint Binding & Policy):**
+  - **การล็อกสิทธิ์ทางเทคนิค (Technical Enforcement):** พัฒนาระบบสร้าง Machine / Hardware Fingerprint จาก Hardware ID / Host UUID และบันทึก `allowed_machine_id` หรือ `instance_limit` ลงใน Ed25519 Cryptographic Token ป้องกันการคัดลอกไฟล์ `.env` หรือ License Key ไปรันเครื่องอื่นโดยไม่ได้รับอนุญาต (ทำงานแบบ Offline 100% ปลอดภัยต่อเครือข่าย Air-gapped) พร้อมระบบ Clock-tampering และ Break-glass 72h DR mode
+  - **ข้อกำหนดทางสัญญาและการค้า (Commercial Terms):** กำหนดเงื่อนไขชัดเจน 1 License = 1 Production Node (+1 UAT Staging Node) พร้อมแพ็กเกจ Enterprise Multi-Node Expansion เพื่อสร้างรายได้ต่อเนื่องจากการขยายคลัสเตอร์ของลูกค้า
+

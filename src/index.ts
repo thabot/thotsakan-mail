@@ -25,8 +25,14 @@ runMigrations(db);
 
 // 2. Initialize Services & Repositories
 const apiKeyRepo = new ApiKeyRepository(db);
-const licenseManager = new LicenseManagerService(env.LICENSE_KEY);
+const licenseManager = new LicenseManagerService({
+  db,
+  isEmergencyOverride: env.THOTSAKAN_EMERGENCY_OVERRIDE,
+  emergencyReason: env.THOTSAKAN_EMERGENCY_REASON,
+});
+await licenseManager.verifyLicense(env.LICENSE_KEY);
 const featureGate = new FeatureGateService(licenseManager);
+
 
 // First-Boot Zero-Config Key Provisioning
 if (process.env.NODE_ENV !== 'test' && apiKeyRepo.countTotalKeys() === 0) {
@@ -89,7 +95,8 @@ api.route('/', createTemplatesRoute(db));
 
 app.route('/', api);
 
-console.log(`🚀 Thotsakan Mail Engine running on port ${env.PORT}`);
+console.log(`🚀 Thotsakan Mail Engine HTTP API running on port ${env.PORT}`);
+console.log(`📬 Thotsakan Inbound SMTP Relay listening on port ${env.SMTP_PORT}`);
 
 export default {
   port: env.PORT,

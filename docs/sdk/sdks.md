@@ -21,7 +21,7 @@ public class MailSender
             async = false
         };
 
-        var response = await client.PostAsJsonAsync("http://localhost:3000/v1/emails/send", payload);
+        var response = await client.PostAsJsonAsync("http://localhost:9547/v1/emails/send", payload);
         response.EnsureSuccessStatusCode();
     }
 }
@@ -51,7 +51,7 @@ public class ThotsakanClient {
         """.formatted(to, subject, html);
 
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:3000/v1/emails/send"))
+            .uri(URI.create("http://localhost:9547/v1/emails/send"))
             .header("Content-Type", "application/json")
             .header("X-API-Key", apiKey)
             .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -67,7 +67,7 @@ public class ThotsakanClient {
 ## 3. TypeScript / Node.js
 ```typescript
 export async function sendEmail(to: string, subject: string, html: string, apiKey: string) {
-  const res = await fetch('http://localhost:3000/v1/emails/send', {
+  const res = await fetch('http://localhost:9547/v1/emails/send', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ export async function sendEmail(to: string, subject: string, html: string, apiKe
 import requests
 
 def send_email(to_email: str, subject: str, html_body: str, api_key: str):
-    url = "http://localhost:3000/v1/emails/send"
+    url = "http://localhost:9547/v1/emails/send"
     headers = {
         "Content-Type": "application/json",
         "X-API-Key": api_key
@@ -112,7 +112,7 @@ use Illuminate\Support\Facades\Http;
 function sendThotsakanMail(string $to, string $subject, string $html, string $apiKey) {
     return Http::withHeaders([
         'X-API-Key' => $apiKey,
-    ])->post('http://localhost:3000/v1/emails/send', [
+    ])->post('http://localhost:9547/v1/emails/send', [
         'to' => $to,
         'subject' => $subject,
         'html' => $html,
@@ -152,7 +152,7 @@ func SendEmail(to, subject, html, apiKey string) error {
 	}
 	body, _ := json.Marshal(payload)
 
-	req, _ := http.NewRequest("POST", "http://localhost:3000/v1/emails/send", bytes.NewBuffer(body))
+	req, _ := http.NewRequest("POST", "http://localhost:9547/v1/emails/send", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", apiKey)
 
@@ -166,7 +166,7 @@ func SendEmail(to, subject, html, apiKey string) error {
 
 ## 7. cURL / Shell
 ```bash
-curl -X POST http://localhost:3000/v1/emails/send \
+curl -X POST http://localhost:9547/v1/emails/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{

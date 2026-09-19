@@ -58,8 +58,8 @@ jobs:
             ### 🐳 Multi-Arch Docker Container:
             ```bash
             docker run -d --name thotsakan \
-              -p 3000:3000 \
-              -p 2525:2525 \
+              -p 9547:9547 \
+              -p 9548:9548 \
               -v $(pwd)/data:/app/data \
               ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
             ```
