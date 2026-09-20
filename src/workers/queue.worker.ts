@@ -8,6 +8,7 @@ import { DeadLetterService } from '../services/dead-letter.service.js';
 import { SentboxCleanerService } from '../services/sentbox-cleaner.service.js';
 import { TemplateEngineService } from '../services/template-engine.service.js';
 import { CryptoService } from '../services/crypto.service.js';
+import { TokenManagerService } from '../services/token-manager.service.js';
 import { getEnv } from '../config/env.js';
 import type { EmailMessage } from '../core/types/email.types.js';
 
@@ -25,6 +26,7 @@ export class QueueWorker {
   private sentboxCleaner: SentboxCleanerService;
   private templateEngine: TemplateEngineService;
   private crypto: CryptoService;
+  private tokenManager: TokenManagerService;
   private isRunning: boolean = false;
   private timer: any = null;
 
@@ -37,6 +39,7 @@ export class QueueWorker {
     this.sentboxCleaner = new SentboxCleanerService();
     this.templateEngine = new TemplateEngineService(db);
     this.crypto = new CryptoService(getEnv().ENCRYPTION_KEY);
+    this.tokenManager = new TokenManagerService(this.accountRepo, this.crypto);
   }
 
   public start(): void {
@@ -152,6 +155,21 @@ export class QueueWorker {
         lastError = `Failed to decrypt credentials for account ${currentAccount.id}: ${err.message}`;
         currentAccount = this.failoverService.getFallbackAccount(currentAccount.id, triedAccountIds);
         continue;
+      }
+
+      // Autonomous Token Refresh for OAuth2 providers (ms-graph, gmail)
+      if (
+        (currentAccount.provider_type === 'ms-graph' || currentAccount.provider_type === 'gmail') &&
+        (!credentials.apiKey || credentials.tenantId || credentials.refreshToken)
+      ) {
+        try {
+          const freshToken = await this.tokenManager.getOrRefreshToken(currentAccount.id);
+          credentials.apiKey = freshToken;
+        } catch (tokenErr: any) {
+          lastError = `Autonomous Token Refresh failed for account ${currentAccount.id}: ${tokenErr.message}`;
+          currentAccount = this.failoverService.getFallbackAccount(currentAccount.id, triedAccountIds);
+          continue;
+        }
       }
 
       // Send via Provider Adapter

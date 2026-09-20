@@ -14,6 +14,7 @@ import { EmailProviderFactory } from '../../providers/factory.js';
 import { SentboxCleanerService } from '../../services/sentbox-cleaner.service.js';
 import { AttachmentGuardService } from '../../services/attachment-guard.service.js';
 import { TemplateEngineService } from '../../services/template-engine.service.js';
+import { TokenManagerService } from '../../services/token-manager.service.js';
 import { getEnv } from '../../config/env.js';
 import type { EmailMessage, EmailPriority } from '../../core/types/email.types.js';
 
@@ -114,6 +115,7 @@ export function createEmailsRoute(db: Database) {
   const sentboxCleaner = new SentboxCleanerService();
   const templateEngine = new TemplateEngineService(db);
   const crypto = new CryptoService(getEnv().ENCRYPTION_KEY);
+  const tokenManager = new TokenManagerService(accountRepo, crypto);
 
   // 1. POST /v1/emails/send
   app.post('/v1/emails/send', zValidator('json', SendEmailSchema), async (c) => {
@@ -256,6 +258,21 @@ export function createEmailsRoute(db: Database) {
         lastError = `Decryption failed: ${err.message}`;
         currentAccount = failoverService.getFallbackAccount(currentAccount.id, triedAccounts);
         continue;
+      }
+
+      // Autonomous Token Refresh for OAuth2 providers (ms-graph, gmail)
+      if (
+        (currentAccount.provider_type === 'ms-graph' || currentAccount.provider_type === 'gmail') &&
+        (!credentials.apiKey || credentials.tenantId || credentials.refreshToken)
+      ) {
+        try {
+          const freshToken = await tokenManager.getOrRefreshToken(currentAccount.id);
+          credentials.apiKey = freshToken;
+        } catch (tokenErr: any) {
+          lastError = `Autonomous Token Refresh failed for account ${currentAccount.id}: ${tokenErr.message}`;
+          currentAccount = failoverService.getFallbackAccount(currentAccount.id, triedAccounts);
+          continue;
+        }
       }
 
       try {

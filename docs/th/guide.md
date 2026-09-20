@@ -204,30 +204,37 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 ### 5.2 ตัวอย่างการตั้งค่าแยกตามผู้ให้บริการ (Provider Configuration Examples)
 
 #### 1. Microsoft 365 / Exchange Online (`providerType: "ms-graph"`)
-เชื่อมต่อผ่าน Microsoft Graph API (`https://graph.microsoft.com/v1.0/me/sendMail`)
-- **สิ่งที่ต้องเตรียม:**
-  1. ไปที่ [Azure Portal](https://portal.azure.com/) -> **Microsoft Entra ID** -> **App registrations** -> กด **New registration**
-  2. ไปที่ **API permissions** -> **Add a permission** -> **Microsoft Graph** -> เพิ่มสิทธิ์ `Mail.Send` แล้วกด **Grant admin consent**
-  3. ไปที่ **Certificates & secrets** -> สร้าง **New client secret** เพื่อขอ Access Token
-  4. ทำการยิงขอ OAuth2 Token:
-     ```bash
-     curl -X POST https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token \
-       -H "Content-Type: application/x-www-form-urlencoded" \
-       -d "client_id=<CLIENT_ID>" \
-       -d "scope=https://graph.microsoft.com/.default" \
-       -d "client_secret=<CLIENT_SECRET>" \
-       -d "grant_type=client_credentials"
-     ```
-  5. นำ `access_token` ที่ได้ มาใส่ในช่อง `apiKey`
-- **ตัวอย่าง Payload:**
+เชื่อมต่อผ่าน Microsoft Graph API (`https://graph.microsoft.com/v1.0/me/sendMail`) รองรับ 2 รูปแบบ:
+
+##### รูปแบบ ก (แนะนำ): Autonomous Token Refresh ตลอดชีพ (ใส่ Tenant ID, Client ID, Client Secret)
+ระบบ Thotsakan จะขอและต่ออายุ Token ให้อัตโนมัติทุก 1 ชั่วโมง และแคชแบบเข้ารหัส AES-256 ปลอดภัย 100%:
+- **สิ่งที่ต้องเตรียมจาก Azure Portal (Microsoft Entra ID):**
+  1. สร้าง **App registration** -> เมนู **API permissions** -> เพิ่ม **Microsoft Graph: `Mail.Send`** และกด **Grant admin consent**
+  2. เมนู **Certificates & secrets** -> สร้าง **New client secret** (แนะนำเลือกอายุ 24 เดือน / 2 ปี)
+  3. คัดลอก `tenant_id`, `client_id` (Application ID), และ `client_secret` (Value) มาใส่ใน credentials:
 ```json
 {
-  "name": "Microsoft 365 Production",
+  "name": "Microsoft 365 Production (Autonomous Refresh)",
   "providerType": "ms-graph",
   "fromEmail": "notification@yourcompany.onmicrosoft.com",
   "fromName": "Corporate System",
   "rateLimitPerMinute": 30,
   "dailyQuotaLimit": 10000,
+  "credentials": {
+    "tenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "clientId": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+    "clientSecret": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+  }
+}
+```
+
+##### รูปแบบ ข: Static Bearer Token ชั่วคราว (ใส่ apiKey โดยตรง)
+เหมาะสำหรับการทดสอบแบบด่วน:
+```json
+{
+  "name": "Microsoft 365 Manual Token",
+  "providerType": "ms-graph",
+  "fromEmail": "notification@yourcompany.onmicrosoft.com",
   "credentials": {
     "apiKey": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6..."
   }
