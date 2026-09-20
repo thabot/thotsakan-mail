@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS email_accounts (
   is_active INTEGER NOT NULL DEFAULT 1,
   token_cache TEXT, -- AES-256-GCM Encrypted
   token_expires_at TEXT,
+  secret_expires_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (fallback_account_id) REFERENCES email_accounts(id) ON DELETE SET NULL

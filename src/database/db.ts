@@ -37,4 +37,11 @@ export function runMigrations(db: Database): void {
     : schemaPath;
   const sql = readFileSync(normalizedPath, 'utf8');
   db.exec(sql);
+
+  // Safe migration for existing SQLite databases
+  try {
+    db.run('ALTER TABLE email_accounts ADD COLUMN secret_expires_at TEXT;');
+  } catch {
+    // Column already exists, safe to ignore
+  }
 }

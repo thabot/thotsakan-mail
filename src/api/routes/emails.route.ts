@@ -69,6 +69,7 @@ const CreateAccountSchema = z.object({
   dailyQuotaLimit: z.number().int().positive().default(10000),
   rateLimitPerMinute: z.number().int().positive().default(60),
   fallbackAccountId: z.string().optional(),
+  secretExpiresAt: z.string().optional(),
 });
 
 const UpdateAccountSchema = z.object({
@@ -80,6 +81,7 @@ const UpdateAccountSchema = z.object({
   fallbackAccountId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   credentials: z.record(z.any()).optional(),
+  secretExpiresAt: z.string().nullable().optional(),
 });
 
 const CreateRuleSchema = z.object({
@@ -445,11 +447,34 @@ export function createEmailsRoute(db: Database) {
   app.get('/v1/accounts', (c) => {
     const tenantId = c.get('tenantId') || 'default_tenant';
     const accounts = accountRepo.findByTenantId(tenantId);
-    // Don't expose encrypted credentials directly
-    const sanitized = accounts.map((a: any) => ({
-      ...a,
-      credentials: '[ENCRYPTED]',
-    }));
+    const now = Date.now();
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+    // Sanitize and calculate Secret Expiry Warnings
+    const sanitized = accounts.map((a: any) => {
+      let warning: any = null;
+      if (a.secret_expires_at) {
+        const expiryTime = new Date(a.secret_expires_at).getTime();
+        const diffMs = expiryTime - now;
+        const diffDays = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+        if (diffMs <= thirtyDaysMs) {
+          warning = {
+            code: 'SECRET_EXPIRING_SOON',
+            remainingDays: diffDays > 0 ? diffDays : 0,
+            message:
+              diffDays > 0
+                ? `Client Secret กำลังจะหมดอายุในอีก ${diffDays} วัน`
+                : 'Client Secret หมดอายุแล้ว กรุณาอัปเดตใหม่ทันที',
+          };
+        }
+      }
+
+      return {
+        ...a,
+        credentials: '[ENCRYPTED]',
+        warning,
+      };
+    });
     return c.json({ ok: true, accounts: sanitized });
   });
 
@@ -470,6 +495,7 @@ export function createEmailsRoute(db: Database) {
       dailyQuotaLimit: body.dailyQuotaLimit,
       rateLimitPerMinute: body.rateLimitPerMinute,
       fallbackAccountId: body.fallbackAccountId,
+      secretExpiresAt: body.secretExpiresAt,
     });
 
     return c.json({ ok: true, accountId, message: 'Account created' }, 201);

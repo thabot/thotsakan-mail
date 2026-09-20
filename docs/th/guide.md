@@ -411,6 +411,41 @@ curl -X PUT http://localhost:9547/v1/accounts/acc_123456 \
 
 ---
 
+### 5.4 การตั้งค่า DNS Records สำหรับ Microsoft 365 และ Google Workspace (SPF, DKIM, DMARC)
+
+เพื่อให้อีเมลที่ส่งออกจากระบบมีอัตราการเข้า Inbox สูงสุด (100% Deliverability) และไม่ถูกปลายทางตีตราว่าเป็น SPAM โดเมนที่ใช้ส่งจะต้องตั้งค่า DNS ให้สอดคล้องกับ Provider ที่ใช้งาน:
+
+#### 1. สำหรับ Microsoft 365 (Exchange Online)
+นำค่าเหล่านี้ไปเพิ่มในระบบจัดการ DNS (เช่น Cloudflare, GoDaddy, Namecheap):
+- **SPF Record (TXT):**
+  - Host: `@` (หรือปล่อยว่างตามระบบ DNS)
+  - Value: `v=spf1 include:spf.protection.outlook.com -all`
+- **DKIM Records (CNAME x2):**
+  - Record 1:
+    - Host: `selector1._domainkey`
+    - Target: `selector1-yourdomain-com._domainkey.yourtenant.onmicrosoft.com`
+  - Record 2:
+    - Host: `selector2._domainkey`
+    - Target: `selector2-yourdomain-com._domainkey.yourtenant.onmicrosoft.com`
+- **DMARC Record (TXT):**
+  - Host: `_dmarc`
+  - Value: `v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@yourdomain.com`
+
+#### 2. สำหรับ Google Workspace (Gmail)
+- **SPF Record (TXT):**
+  - Host: `@`
+  - Value: `v=spf1 include:_spf.google.com ~all`
+- **DKIM Record (TXT):**
+  - Host: `google._domainkey`
+  - Value: `v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg...` (ดึงค่า Key จาก Google Admin Console)
+- **DMARC Record (TXT):**
+  - Host: `_dmarc`
+  - Value: `v=DMARC1; p=reject; rua=mailto:dmarc-reports@yourdomain.com`
+
+> **💡 เคล็ดลับ:** หลังจากตั้งค่า DNS เสร็จสิ้น คุณสามารถเข้าหน้า Web Console ที่ `http://localhost:9547/` เลือกแถบเมนู **"DNS Verify"** เพื่อกดตรวจสอบสถานะความถูกต้องของ SPF และ DKIM ได้แบบเรียลไทม์ทันที
+
+---
+
 ## 6. การตรวจสอบสถิติ รายงานผล และคิวค้าง (Real-Time Metrics & Reports)
 
 ระบบมี API สำหรับตรวจสอบประสิทธิภาพแบบ Real-time เช็คได้ทั้งจำนวนที่ส่งสำเร็จ, เมลที่ค้างในคิว, เมลที่ล้มเหลว และการดึง Log ย้อนหลัง:
