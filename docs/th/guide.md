@@ -177,53 +177,221 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 
 ---
 
-## 5. การตั้งค่าบัญชีผู้ส่งหลายค่าย และจำกัดโควตา (Multi-Provider Accounts & Rate Limiting)
+## 5. การตั้งค่าบัญชีผู้ส่งและการเชื่อมต่อ API แต่ละค่าย (Provider Credentials & Multi-Account Setup)
 
-ระบบ Thotsakan รองรับการเชื่อมต่อ **บัญชีผู้ส่งพร้อมกันหลายบัญชี** สามารถแยกค่าย (AWS SES, Microsoft 365, Gmail, Resend, Generic SMTP) และกำหนด **เพดานต่อนาที (Rate Limit Per Minute)** และ **โควตาสูงสุดต่อวัน (Daily Quota Limit)** พร้อมเชื่อมต่อระบบ Failover สำรองอัตโนมัติ
+ระบบ Thotsakan รองรับการเชื่อมต่อ **บัญชีผู้ส่งพร้อมกันหลายบัญชี** สามารถแยกค่าย (AWS SES, Microsoft 365, Gmail, Resend, SendGrid, Postmark, Brevo, Mailgun, MailerSend, ZeptoMail, Scaleway, SparkPost, Mandrill, Generic SMTP) และกำหนด **เพดานต่อนาที (Rate Limit Per Minute)** และ **โควตาสูงสุดต่อวัน (Daily Quota Limit)** พร้อมเชื่อมต่อระบบ Smart Failover สำรองอัตโนมัติ
 
-### 5.1 เชื่อมต่อบัญชีหลัก (เช่น AWS SES - สูงสุด 300 ฉบับ/นาที, 50,000 ฉบับ/วัน)
-```bash
-curl -X POST http://localhost:9547/v1/accounts \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{
-    "name": "AWS SES เมนหลัก",
-    "providerType": "aws-ses",
-    "fromEmail": "noreply@company.com",
-    "fromName": "Company System",
-    "rateLimitPerMinute": 300,
-    "dailyQuotaLimit": 50000,
-    "credentials": {
-      "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
-      "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "region": "ap-southeast-1"
-    }
-  }'
+ทุก Provider จะถูกเพิ่มผ่าน API Endpoint:
+`POST /v1/accounts` (Header: `X-API-Key: YOUR_API_KEY`, `Content-Type: application/json`)
+
+---
+
+### 5.1 รายละเอียดฟิลด์ใน ProviderCredentials (`credentials`)
+
+| ชื่อฟิลด์ | ชนิดข้อมูล | คำอธิบายและ Provider ที่ใช้งาน |
+| :--- | :--- | :--- |
+| `apiKey` | String | API Key, Secret Token หรือ OAuth2 Bearer Token (ใช้ใน AWS SES, Resend, SendGrid, Postmark, Brevo, Mailgun, MS Graph, Gmail, ฯลฯ) |
+| `secretKey` | String | AWS Secret Access Key (ใช้คู่กับ `apiKey` สำหรับ AWS SES) |
+| `region` | String | AWS Region เช่น `ap-southeast-1`, `us-east-1` (สำหรับ AWS SES) |
+| `host` | String | ที่อยู่เซิร์ฟเวอร์ SMTP เช่น `mail.yourdomain.com` (สำหรับ Generic SMTP) |
+| `port` | Number | พอร์ตเชื่อมต่อ เช่น `587`, `465`, `25` (สำหรับ Generic SMTP) |
+| `secure` | Boolean | `true` สำหรับ SSL (Port 465) หรือ `false` สำหรับ STARTTLS (Port 587) |
+| `user` | String | บัญชีผู้ใช้ Username (สำหรับ Generic SMTP) |
+| `pass` | String | รหัสผ่าน Password (สำหรับ Generic SMTP) |
+
+---
+
+### 5.2 ตัวอย่างการตั้งค่าแยกตามผู้ให้บริการ (Provider Configuration Examples)
+
+#### 1. Microsoft 365 / Exchange Online (`providerType: "ms-graph"`)
+เชื่อมต่อผ่าน Microsoft Graph API (`https://graph.microsoft.com/v1.0/me/sendMail`)
+- **สิ่งที่ต้องเตรียม:**
+  1. ไปที่ [Azure Portal](https://portal.azure.com/) -> **Microsoft Entra ID** -> **App registrations** -> กด **New registration**
+  2. ไปที่ **API permissions** -> **Add a permission** -> **Microsoft Graph** -> เพิ่มสิทธิ์ `Mail.Send` แล้วกด **Grant admin consent**
+  3. ไปที่ **Certificates & secrets** -> สร้าง **New client secret** เพื่อขอ Access Token
+  4. ทำการยิงขอ OAuth2 Token:
+     ```bash
+     curl -X POST https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token \
+       -H "Content-Type: application/x-www-form-urlencoded" \
+       -d "client_id=<CLIENT_ID>" \
+       -d "scope=https://graph.microsoft.com/.default" \
+       -d "client_secret=<CLIENT_SECRET>" \
+       -d "grant_type=client_credentials"
+     ```
+  5. นำ `access_token` ที่ได้ มาใส่ในช่อง `apiKey`
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "Microsoft 365 Production",
+  "providerType": "ms-graph",
+  "fromEmail": "notification@yourcompany.onmicrosoft.com",
+  "fromName": "Corporate System",
+  "rateLimitPerMinute": 30,
+  "dailyQuotaLimit": 10000,
+  "credentials": {
+    "apiKey": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6..."
+  }
+}
 ```
 
-### 5.2 เชื่อมต่อบัญชีสำรอง (เช่น Resend หรือ M365) พร้อมผูกเป็น Fallback
-```bash
-curl -X POST http://localhost:9547/v1/accounts \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{
-    "name": "Resend บัญชีสำรอง",
-    "providerType": "resend",
-    "fromEmail": "noreply@company.com",
-    "rateLimitPerMinute": 60,
-    "dailyQuotaLimit": 10000,
-    "credentials": {
-      "apiKey": "re_123456789_abcdef"
-    }
-  }'
+#### 2. AWS SES (`providerType: "aws-ses"`)
+- **สิ่งที่ต้องเตรียม:** IAM User พร้อม Policy `ses:SendEmail`, `ses:SendRawEmail`, `accessKeyId`, `secretAccessKey` และ `region`
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "AWS SES เมนหลัก",
+  "providerType": "aws-ses",
+  "fromEmail": "noreply@company.com",
+  "fromName": "Company System",
+  "rateLimitPerMinute": 300,
+  "dailyQuotaLimit": 50000,
+  "credentials": {
+    "apiKey": "AKIAIOSFODNN7EXAMPLE",
+    "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "region": "ap-southeast-1"
+  }
+}
 ```
+
+#### 3. Resend (`providerType: "resend"`)
+- **สิ่งที่ต้องเตรียม:** API Key จาก Resend Dashboard (`re_...`)
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "Resend บัญชีสำรอง",
+  "providerType": "resend",
+  "fromEmail": "noreply@company.com",
+  "rateLimitPerMinute": 60,
+  "dailyQuotaLimit": 10000,
+  "credentials": {
+    "apiKey": "re_123456789_abcdef"
+  }
+}
+```
+
+#### 4. SendGrid (`providerType: "sendgrid"`)
+- **สิ่งที่ต้องเตรียม:** API Key จาก SendGrid Dashboard (`SG....`) ที่มีสิทธิ์ Mail Send
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "SendGrid Primary",
+  "providerType": "sendgrid",
+  "fromEmail": "noreply@company.com",
+  "rateLimitPerMinute": 200,
+  "dailyQuotaLimit": 25000,
+  "credentials": {
+    "apiKey": "SG.xxxxxxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+  }
+}
+```
+
+#### 5. Postmark (`providerType: "postmark"`)
+- **สิ่งที่ต้องเตรียม:** Server API Token จาก Postmark Server
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "Postmark Transactional",
+  "providerType": "postmark",
+  "fromEmail": "noreply@company.com",
+  "rateLimitPerMinute": 300,
+  "dailyQuotaLimit": 50000,
+  "credentials": {
+    "apiKey": "25f18c64-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+}
+```
+
+#### 6. Brevo / Sendinblue (`providerType: "brevo"`)
+- **สิ่งที่ต้องเตรียม:** API Key จาก Brevo (`xkeysib-...`)
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "Brevo Provider",
+  "providerType": "brevo",
+  "fromEmail": "noreply@company.com",
+  "rateLimitPerMinute": 60,
+  "dailyQuotaLimit": 9000,
+  "credentials": {
+    "apiKey": "xkeysib-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+#### 7. Mailgun (`providerType: "mailgun"`)
+- **สิ่งที่ต้องเตรียม:** Private API Key จาก Mailgun
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "Mailgun Provider",
+  "providerType": "mailgun",
+  "fromEmail": "noreply@company.com",
+  "rateLimitPerMinute": 100,
+  "dailyQuotaLimit": 10000,
+  "credentials": {
+    "apiKey": "key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+#### 8. Google Workspace / Gmail API (`providerType: "gmail"`)
+- **สิ่งที่ต้องเตรียม:** Google OAuth2 Access Token (Scope: `https://www.googleapis.com/auth/gmail.send`)
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "Google Workspace Mailer",
+  "providerType": "gmail",
+  "fromEmail": "sender@company.com",
+  "rateLimitPerMinute": 60,
+  "dailyQuotaLimit": 2000,
+  "credentials": {
+    "apiKey": "ya29.a0AfH6SMB...<ACCESS_TOKEN>..."
+  }
+}
+```
+
+#### 9. SaaS อื่นๆ (MailerSend, ZeptoMail, Scaleway, SparkPost, Mandrill)
+- **สิ่งที่ต้องเตรียม:** `apiKey` ของบริการนั้นๆ
+- **ตัวอย่าง Payload (MailerSend):**
+```json
+{
+  "name": "MailerSend Secondary",
+  "providerType": "mailersend",
+  "fromEmail": "noreply@company.com",
+  "credentials": {
+    "apiKey": "mlsn.xxxxxxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+#### 10. Generic SMTP Relay (`providerType: "generic-smtp"`)
+สำหรับเชื่อมต่อกับ On-Premise Mail Server, Postfix, Exim, หรือเซิร์ฟเวอร์ SMTP ภายในองค์กร
+- **สิ่งที่ต้องเตรียม:** Host, Port, Secure (SSL/TLS), Username, Password
+- **ตัวอย่าง Payload:**
+```json
+{
+  "name": "Corporate Postfix SMTP",
+  "providerType": "generic-smtp",
+  "fromEmail": "noreply@corp.local",
+  "rateLimitPerMinute": 60,
+  "dailyQuotaLimit": 10000,
+  "credentials": {
+    "host": "mail.corp.local",
+    "port": 587,
+    "secure": false,
+    "user": "smtp-user",
+    "pass": "smtp-secret-password"
+  }
+}
+```
+
+---
 
 ### 5.3 ดูรายการและอัปเดตโควตาเพดานการส่ง (`PUT /v1/accounts/:id`)
 ```bash
 # เรียกดูบัญชีทั้งหมด
 curl -H "X-API-Key: YOUR_API_KEY" http://localhost:9547/v1/accounts
 
-# ปรับเพดานส่งเป็น 600 ฉบับ/นาที และ 100,000 ฉบับ/วัน
+# ปรับเพดานส่งเป็น 600 ฉบับ/นาที และ 100,000 ฉบับ/วัน พร้อมผูก Fallback สำรอง
 curl -X PUT http://localhost:9547/v1/accounts/acc_123456 \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
