@@ -201,17 +201,43 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 
 ---
 
-### 5.2 ตัวอย่างการตั้งค่าแยกตามผู้ให้บริการ (Provider Configuration Examples)
+### 5.2 ตัวอย่างการตั้งค่าและคู่มือการขอ Token / API Key แต่ละผู้ให้บริการ (Provider Configuration & Token Acquisition Guides)
+
+---
 
 #### 1. Microsoft 365 / Exchange Online (`providerType: "ms-graph"`)
-เชื่อมต่อผ่าน Microsoft Graph API (`https://graph.microsoft.com/v1.0/me/sendMail`) รองรับ 2 รูปแบบ:
+เชื่อมต่อผ่าน Microsoft Graph API (`https://graph.microsoft.com/v1.0/me/sendMail`)
 
-##### รูปแบบ ก (แนะนำ): Autonomous Token Refresh ตลอดชีพ (ใส่ Tenant ID, Client ID, Client Secret)
-ระบบ Thotsakan จะขอและต่ออายุ Token ให้อัตโนมัติทุก 1 ชั่วโมง และแคชแบบเข้ารหัส AES-256 ปลอดภัย 100%:
-- **สิ่งที่ต้องเตรียมจาก Azure Portal (Microsoft Entra ID):**
-  1. สร้าง **App registration** -> เมนู **API permissions** -> เพิ่ม **Microsoft Graph: `Mail.Send`** และกด **Grant admin consent**
-  2. เมนู **Certificates & secrets** -> สร้าง **New client secret** (แนะนำเลือกอายุ 24 เดือน / 2 ปี)
-  3. คัดลอก `tenant_id`, `client_id` (Application ID), และ `client_secret` (Value) มาใส่ใน credentials:
+##### 📌 ขั้นตอนการขอ Credentials และ Token จาก Azure Portal (Microsoft Entra ID):
+1. เข้าสู่ **[Azure Portal](https://portal.azure.com/)** -> ไปที่ **Microsoft Entra ID** -> เมนู **App registrations** -> คลิก **+ New registration**
+2. ตั้งชื่อแอปพลิเคชัน (เช่น `Thotsakan-Mail-Service`) -> เลือกประเภทบัญชีเป็น `Accounts in this organizational directory only (Single tenant)` -> กด **Register**
+3. ที่หน้า Overview ของแอปพลิเคชัน ให้คัดลอกค่า:
+   - **Application (client) ID**
+   - **Directory (tenant) ID**
+4. กำหนดสิทธิ์การส่งอีเมล (API Permissions):
+   - ไปที่เมนู **API permissions** -> คลิก **+ Add a permission** -> เลือก **Microsoft Graph**
+   - เลือก **Application permissions** (สำหรับเบื้องหลังระดับ Service Daemon)
+   - ค้นหาและติ๊กเลือก: `Mail.Send`
+   - คลิก **Add permissions**
+   - **สำคัญมาก:** คลิกปุ่ม **Grant admin consent for [ชื่อองค์กรของคุณ]** เพื่ออนุมัติสิทธิ์
+5. สร้าง Client Secret:
+   - ไปที่เมนู **Certificates & secrets** -> แถบ **Client secrets** -> คลิก **+ New client secret**
+   - ตั้ง Description (เช่น `Thotsakan Key`) และเลือกอายุ (แนะนำเลือก `24 months` / 2 ปี)
+   - คลิก **Add** แล้ว **คัดลอกค่าในช่อง `Value` ทันที** (ค่านี้จะแสดงแค่ครั้งเดียว)
+
+##### 🛠️ วิธีการขอ Bearer Token ด้วยตนเองผ่าน cURL (สำหรับทดสอบ):
+```bash
+curl -X POST https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=<CLIENT_ID>" \
+  -d "scope=https://graph.microsoft.com/.default" \
+  -d "client_secret=<CLIENT_SECRET>" \
+  -d "grant_type=client_credentials"
+```
+*(ผลลัพธ์จะได้ `access_token` ที่มีอายุ 3,600 วินาที / 1 ชั่วโมง)*
+
+##### 🚀 ตัวอย่าง Payload สำหรับ Thotsakan:
+* **รูปแบบ ก (แนะนำ - Autonomous Token Refresh ตลอดชีพ):**
 ```json
 {
   "name": "Microsoft 365 Production (Autonomous Refresh)",
@@ -224,12 +250,11 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
     "tenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "clientId": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
     "clientSecret": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
-  }
+  },
+  "secretExpiresAt": "2028-09-20T00:00:00Z"
 }
 ```
-
-##### รูปแบบ ข: Static Bearer Token ชั่วคราว (ใส่ apiKey โดยตรง)
-เหมาะสำหรับการทดสอบแบบด่วน:
+* **รูปแบบ ข (Static Bearer Token ชั่วคราว 1 ชม.):**
 ```json
 {
   "name": "Microsoft 365 Manual Token",
@@ -241,9 +266,69 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 }
 ```
 
-#### 2. AWS SES (`providerType: "aws-ses"`)
-- **สิ่งที่ต้องเตรียม:** IAM User พร้อม Policy `ses:SendEmail`, `ses:SendRawEmail`, `accessKeyId`, `secretAccessKey` และ `region`
-- **ตัวอย่าง Payload:**
+---
+
+#### 2. Google Workspace / Gmail API (`providerType: "gmail"`)
+เชื่อมต่อผ่าน Gmail REST API v1 (`https://gmail.googleapis.com/gmail/v1/users/me/messages/send`)
+
+##### 📌 ขั้นตอนการขอ OAuth2 Client ID & Refresh Token:
+1. เข้าสู่ **[Google Cloud Console](https://console.cloud.google.com/)** -> สร้าง Project ใหม่ (เช่น `Thotsakan-Mailer`)
+2. ไปที่ **APIs & Services** -> **Library** -> ค้นหา `Gmail API` แล้วคลิก **Enable**
+3. ไปที่ **APIs & Services** -> **OAuth consent screen**:
+   - เลือก User Type เป็น `Internal` (สำหรับใช้งานภายในโดเมน Google Workspace) หรือ `External`
+   - เพิ่ม Scope: `https://www.googleapis.com/auth/gmail.send`
+4. ไปที่ **Credentials** -> **+ Create Credentials** -> เลือก **OAuth client ID**:
+   - Application type: `Web application` (หรือ Desktop)
+   - เพิ่ม Authorized redirect URI: `https://developers.google.com/oauthplayground` (หากต้องการขอ Refresh Token ผ่าน Playground)
+   - บันทึกและคัดลอก **Client ID** และ **Client Secret**
+5. การขอ `refresh_token`:
+   - เข้า **[OAuth 2.0 Playground](https://developers.google.com/oauthplayground/)** -> คลิกไอคอนฟันเฟือง (Settings) ขวาบน -> ติ๊ก `Use your own OAuth credentials` แล้วใส่ Client ID & Secret
+   - ในช่อง Input scopes ใส่: `https://www.googleapis.com/auth/gmail.send` -> คลิก **Authorize APIs**
+   - ล็อกอินด้วยบัญชีผู้ส่ง -> คลิก **Exchange authorization code for tokens** -> คัดลอกค่า `Refresh token`
+
+##### 🚀 ตัวอย่าง Payload สำหรับ Thotsakan:
+* **รูปแบบ Autonomous Refresh (แนะนำ):**
+```json
+{
+  "name": "Google Workspace Mailer",
+  "providerType": "gmail",
+  "fromEmail": "sender@yourcompany.com",
+  "rateLimitPerMinute": 60,
+  "dailyQuotaLimit": 2000,
+  "credentials": {
+    "clientId": "xxxx.apps.googleusercontent.com",
+    "clientSecret": "GOCSPX-xxxx",
+    "refreshToken": "1//04xxxx"
+  }
+}
+```
+
+---
+
+#### 3. Amazon AWS SES (`providerType: "aws-ses"`)
+เชื่อมต่อผ่าน Amazon Simple Email Service (SES)
+
+##### 📌 ขั้นตอนการขอ Access Key จาก AWS Console:
+1. เข้าสู่ **[AWS Management Console](https://console.aws.amazon.com/)** -> ไปที่ **IAM (Identity and Access Management)**
+2. เมนู **Users** -> คลิก **Create user** (เช่น `thotsakan-ses-sender`)
+3. เลือก **Attach policies directly** -> คลิก **Create policy** (JSON):
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": ["ses:SendRawEmail", "ses:SendEmail"],
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+4. สร้างผู้ใช้เสร็จแล้ว ไปที่แถบ **Security credentials** -> ในส่วน **Access keys** คลิก **Create access key**
+5. เลือก Use case เป็น `Application running outside AWS` -> คัดลอก **Access Key ID** และ **Secret Access Key**
+6. ไปที่บริการ **Amazon SES Console** -> เมนู **Verified identities** -> กด **Create identity** เพื่อยืนยัน Domain หรือ Email Address ผู้ส่ง
+
+##### 🚀 ตัวอย่าง Payload สำหรับ Thotsakan:
 ```json
 {
   "name": "AWS SES เมนหลัก",
@@ -260,9 +345,14 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 }
 ```
 
-#### 3. Resend (`providerType: "resend"`)
-- **สิ่งที่ต้องเตรียม:** API Key จาก Resend Dashboard (`re_...`)
-- **ตัวอย่าง Payload:**
+---
+
+#### 4. Resend (`providerType: "resend"`)
+##### 📌 ขั้นตอนการขอ API Key:
+1. เข้าสู่ **[Resend Dashboard](https://resend.com/overview)** -> เมนู **API Keys** -> คลิก **Create API Key**
+2. ตั้งชื่อ Key -> Permission: `Full access` หรือ `Sending access` (ระบุ Domain ได้)
+3. คัดลอก API Key ที่ขึ้นต้นด้วย `re_...`
+##### 🚀 ตัวอย่าง Payload:
 ```json
 {
   "name": "Resend บัญชีสำรอง",
@@ -276,9 +366,14 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 }
 ```
 
-#### 4. SendGrid (`providerType: "sendgrid"`)
-- **สิ่งที่ต้องเตรียม:** API Key จาก SendGrid Dashboard (`SG....`) ที่มีสิทธิ์ Mail Send
-- **ตัวอย่าง Payload:**
+---
+
+#### 5. SendGrid (`providerType: "sendgrid"`)
+##### 📌 ขั้นตอนการขอ API Key:
+1. เข้าสู่ **[SendGrid Dashboard](https://app.sendgrid.com/)** -> เมนู **Settings** -> **API Keys** -> คลิก **Create API Key**
+2. ตั้งชื่อ Key -> API Key Permissions: เลือก `Restricted Access` -> เปิดสิทธิ์ `Mail Send` ให้เป็น `Full Access`
+3. คลิก **Create & View** -> คัดลอก API Key ที่ขึ้นต้นด้วย `SG....`
+##### 🚀 ตัวอย่าง Payload:
 ```json
 {
   "name": "SendGrid Primary",
@@ -292,9 +387,13 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 }
 ```
 
-#### 5. Postmark (`providerType: "postmark"`)
-- **สิ่งที่ต้องเตรียม:** Server API Token จาก Postmark Server
-- **ตัวอย่าง Payload:**
+---
+
+#### 6. Postmark (`providerType: "postmark"`)
+##### 📌 ขั้นตอนการขอ Server API Token:
+1. เข้าสู่ **[Postmark Console](https://account.postmarkapp.com/)** -> เลือก Server ของคุณ (เช่น `Transactional Server`)
+2. ไปที่แถบ **API Tokens** -> คัดลอก **Server API Token**
+##### 🚀 ตัวอย่าง Payload:
 ```json
 {
   "name": "Postmark Transactional",
@@ -308,9 +407,14 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 }
 ```
 
-#### 6. Brevo / Sendinblue (`providerType: "brevo"`)
-- **สิ่งที่ต้องเตรียม:** API Key จาก Brevo (`xkeysib-...`)
-- **ตัวอย่าง Payload:**
+---
+
+#### 7. Brevo / Sendinblue (`providerType: "brevo"`)
+##### 📌 ขั้นตอนการขอ API Key:
+1. เข้าสู่ **[Brevo Dashboard](https://app.brevo.com/)** -> คลิกชื่อโปรไฟล์ขวาบน -> เลือก **SMTP & API**
+2. ไปที่แถบ **API keys** -> คลิก **Generate a new API key**
+3. ตั้งชื่อ Key -> คัดลอก API Key ที่ขึ้นต้นด้วย `xkeysib-...`
+##### 🚀 ตัวอย่าง Payload:
 ```json
 {
   "name": "Brevo Provider",
@@ -324,9 +428,13 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 }
 ```
 
-#### 7. Mailgun (`providerType: "mailgun"`)
-- **สิ่งที่ต้องเตรียม:** Private API Key จาก Mailgun
-- **ตัวอย่าง Payload:**
+---
+
+#### 8. Mailgun (`providerType: "mailgun"`)
+##### 📌 ขั้นตอนการขอ Private API Key:
+1. เข้าสู่ **[Mailgun Dashboard](https://app.mailgun.com/)** -> คลิกโปรไฟล์ขวาบน -> เลือก **API Security**
+2. ในส่วน **Mailgun API keys** -> คัดลอกหรือสร้าง **Primary API key** (ขึ้นต้นด้วย `key-...`)
+##### 🚀 ตัวอย่าง Payload:
 ```json
 {
   "name": "Mailgun Provider",
@@ -335,30 +443,19 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
   "rateLimitPerMinute": 100,
   "dailyQuotaLimit": 10000,
   "credentials": {
-    "apiKey": "key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    "apiKey": "key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "host": "mg.yourdomain.com"
   }
 }
 ```
 
-#### 8. Google Workspace / Gmail API (`providerType: "gmail"`)
-- **สิ่งที่ต้องเตรียม:** Google OAuth2 Access Token (Scope: `https://www.googleapis.com/auth/gmail.send`)
-- **ตัวอย่าง Payload:**
-```json
-{
-  "name": "Google Workspace Mailer",
-  "providerType": "gmail",
-  "fromEmail": "sender@company.com",
-  "rateLimitPerMinute": 60,
-  "dailyQuotaLimit": 2000,
-  "credentials": {
-    "apiKey": "ya29.a0AfH6SMB...<ACCESS_TOKEN>..."
-  }
-}
-```
+---
 
-#### 9. SaaS อื่นๆ (MailerSend, ZeptoMail, Scaleway, SparkPost, Mandrill)
-- **สิ่งที่ต้องเตรียม:** `apiKey` ของบริการนั้นๆ
-- **ตัวอย่าง Payload (MailerSend):**
+#### 9. MailerSend (`providerType: "mailersend"`)
+##### 📌 ขั้นตอนการขอ API Token:
+1. เข้าสู่ **[MailerSend Dashboard](https://www.mailersend.com/)** -> เมนู **API Tokens** -> คลิก **Create Token**
+2. กำหนดสิทธิ์ `Email: Full access` -> คัดลอก Token (ขึ้นต้นด้วย `mlsn....`)
+##### 🚀 ตัวอย่าง Payload:
 ```json
 {
   "name": "MailerSend Secondary",
@@ -370,10 +467,86 @@ curl -X DELETE http://localhost:9547/v1/templates/welcome_member \
 }
 ```
 
-#### 10. Generic SMTP Relay (`providerType: "generic-smtp"`)
-สำหรับเชื่อมต่อกับ On-Premise Mail Server, Postfix, Exim, หรือเซิร์ฟเวอร์ SMTP ภายในองค์กร
-- **สิ่งที่ต้องเตรียม:** Host, Port, Secure (SSL/TLS), Username, Password
-- **ตัวอย่าง Payload:**
+---
+
+#### 10. ZeptoMail (`providerType: "zeptomail"`)
+##### 📌 ขั้นตอนการขอ Send Mail Token:
+1. เข้าสู่ **[ZeptoMail (Zoho) Console](https://zeptomail.zoho.com/)** -> เลือก Mail Agent ของคุณ
+2. ไปที่แถบ **Setup Info** -> ในส่วน **Send Mail Token** ให้คัดลอก **Zoho-enczapikey**
+##### 🚀 ตัวอย่าง Payload:
+```json
+{
+  "name": "ZeptoMail Agent",
+  "providerType": "zeptomail",
+  "fromEmail": "noreply@company.com",
+  "credentials": {
+    "apiKey": "PHtE6r0xxxxxx"
+  }
+}
+```
+
+---
+
+#### 11. Scaleway (`providerType: "scaleway"`)
+##### 📌 ขั้นตอนการขอ API Secret Key:
+1. เข้าสู่ **[Scaleway Console](https://console.scaleway.com/)** -> เมนู IAM -> **API Keys** -> คลิก **Generate API Key**
+2. คัดลอก **Secret Key**
+##### 🚀 ตัวอย่าง Payload:
+```json
+{
+  "name": "Scaleway Transactional",
+  "providerType": "scaleway",
+  "fromEmail": "noreply@company.com",
+  "credentials": {
+    "apiKey": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+}
+```
+
+---
+
+#### 12. SparkPost (`providerType: "sparkpost"`)
+##### 📌 ขั้นตอนการขอ API Key:
+1. เข้าสู่ **[SparkPost Dashboard](https://app.sparkpost.com/)** -> เมนู **Configuration** -> **API Keys**
+2. คลิก **Create API Key** -> กำหนดสิทธิ์ `Transmissions: Read/Write` -> คัดลอก Key
+##### 🚀 ตัวอย่าง Payload:
+```json
+{
+  "name": "SparkPost Cluster",
+  "providerType": "sparkpost",
+  "fromEmail": "noreply@company.com",
+  "credentials": {
+    "apiKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+---
+
+#### 13. Mandrill / Mailchimp Transactional (`providerType: "mandrill"`)
+##### 📌 ขั้นตอนการขอ API Key:
+1. เข้าสู่ **[Mailchimp Transactional Dashboard](https://mandrillapp.com/)** -> เมนู **Settings** -> **API Keys**
+2. คลิก **+ New API Key** -> คัดลอก Key
+##### 🚀 ตัวอย่าง Payload:
+```json
+{
+  "name": "Mandrill Primary",
+  "providerType": "mandrill",
+  "fromEmail": "noreply@company.com",
+  "credentials": {
+    "apiKey": "md-xxxxxxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+---
+
+#### 14. Generic SMTP Relay (`providerType: "generic-smtp"`)
+สำหรับเชื่อมต่อกับ On-Premise Mail Server, Postfix, Exim, Zimbra หรือเซิร์ฟเวอร์ SMTP ภายในองค์กร
+##### 📌 สิ่งที่ต้องเตรียมจากระบบ SMTP:
+- Server Hostname / IP และ Port (พอร์ต `587` สำหรับ STARTTLS หรือ `465` สำหรับ SSL)
+- SMTP Username และ Password / App Password
+##### 🚀 ตัวอย่าง Payload:
 ```json
 {
   "name": "Corporate Postfix SMTP",
