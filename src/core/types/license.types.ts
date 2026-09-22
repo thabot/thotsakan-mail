@@ -34,7 +34,7 @@ export interface MachineFingerprint {
   isContainer: boolean;
 }
 
-export type LicenseStatus = 'VALID' | 'GRACE_PERIOD' | 'BREAK_GLASS' | 'MACHINE_MISMATCH' | 'EXPIRED' | 'CLOCK_TAMPERED' | 'INVALID';
+export type LicenseStatus = 'VALID' | 'GRACE_PERIOD' | 'BREAK_GLASS' | 'MACHINE_MISMATCH' | 'EXPIRED' | 'CLOCK_TAMPERED' | 'REVOKED' | 'INVALID';
 
 export interface LicenseVerificationResult {
   tier: LicenseTier;

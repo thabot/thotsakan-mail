@@ -17,6 +17,7 @@ import { createDocsRoute } from './api/routes/docs.route.js';
 import { createWebUIRoute } from './ui/ui.route.js';
 import { QueueWorker } from './workers/queue.worker.js';
 import { MaintenanceWorker } from './workers/maintenance.worker.js';
+import { TelemetryWorker } from './workers/telemetry.worker.js';
 
 // 1. Initialize Database & Migrations
 const env = getEnv();
@@ -59,16 +60,24 @@ const maintenanceWorker = new MaintenanceWorker(db, {
   backupDir: 'data/backups',
   intervalMs: 24 * 60 * 60 * 1000,
 });
+const telemetryWorker = new TelemetryWorker(db, licenseManager, {
+  portalUrl: env.OPS_PORTAL_URL,
+  intervalMs: env.TELEMETRY_INTERVAL_MS,
+  enabled: env.TELEMETRY_ENABLED,
+  licenseKey: env.LICENSE_KEY,
+});
 
 queueWorker.start();
 maintenanceWorker.start();
+telemetryWorker.start();
 
 // 4. Register Graceful Shutdown
 const lifecycle = AppLifecycleManager.getInstance();
 lifecycle.registerCleanupHandler(async () => {
-  console.log('Stopping Queue & Maintenance Workers...');
+  console.log('Stopping Queue, Maintenance, and Telemetry Workers...');
   queueWorker.stop();
   maintenanceWorker.stop();
+  telemetryWorker.stop();
 });
 
 // 5. Build Hono Application

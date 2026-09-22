@@ -18,6 +18,12 @@ export const envSchema = z.object({
   THOTSAKAN_EMERGENCY_REASON: z.string().optional(),
   DEAD_LETTER_WEBHOOK_URL: z.string().url().optional().or(z.literal('')),
   LOG_RETENTION_DAYS: z.coerce.number().default(90),
+  OPS_PORTAL_URL: z.string().url().default('https://thotsakan-ops.thabot47.workers.dev'),
+  TELEMETRY_INTERVAL_MS: z.coerce.number().default(300_000), // 5 minutes
+  TELEMETRY_ENABLED: z
+    .string()
+    .optional()
+    .transform((val) => val === undefined || (val !== 'false' && val !== '0')),
 });
 
 export type Env = z.infer<typeof envSchema>;

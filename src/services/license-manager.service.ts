@@ -41,6 +41,8 @@ export class LicenseManagerService {
   private isBreakGlassActive: boolean = false;
   private breakGlassHoursRemaining: number = 0;
   private isClockTampered: boolean = false;
+  private isRemotelyLocked: boolean = false;
+  private remoteLockReason?: string;
 
   constructor(options?: string | LicenseManagerOptions) {
     if (typeof options === 'string') {
@@ -63,6 +65,14 @@ export class LicenseManagerService {
   public async verifyLicense(licenseKey?: string): Promise<LicenseVerificationResult> {
     const fingerprint = await this.fingerprintService.getFingerprint();
     this.currentMachineId = fingerprint.machineId;
+
+    // 0. Remote Revoke/Lock Check
+    if (this.isRemotelyLocked) {
+      this.currentTier = 'COMMUNITY';
+      this.currentStatus = 'REVOKED';
+      this.claims = null;
+      return this.buildResult();
+    }
 
     // 1. Clock Tampering / Time-Rollback Verification
     if (this.clockTamperService) {
@@ -226,4 +236,25 @@ export class LicenseManagerService {
     };
   }
 
+  public applyRemoteLock(reason?: string): void {
+    this.isRemotelyLocked = true;
+    this.remoteLockReason = reason;
+    this.currentTier = 'COMMUNITY';
+    this.currentStatus = 'REVOKED';
+    this.claims = null;
+    console.warn(`🚨 [REMOTE KILL-SWITCH] License remotely revoked/locked. Reason: ${reason || 'Subscription expired or locked by vendor'}`);
+  }
+
+  public clearRemoteLock(): void {
+    this.isRemotelyLocked = false;
+    this.remoteLockReason = undefined;
+  }
+
+  public isRemoteLocked(): boolean {
+    return this.isRemotelyLocked;
+  }
+
+  public getRemoteLockReason(): string | undefined {
+    return this.remoteLockReason;
+  }
 }
