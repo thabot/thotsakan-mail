@@ -15,12 +15,13 @@ export class AccountRepository {
     dailyQuotaLimit?: number;
     rateLimitPerMinute?: number;
     fallbackAccountId?: string;
+    secretExpiresAt?: string;
   }): void {
     const stmt = this.db.prepare(`
       INSERT INTO email_accounts (
         id, tenant_id, name, provider_type, credentials, from_email, from_name,
-        daily_quota_limit, rate_limit_per_minute, fallback_account_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        daily_quota_limit, rate_limit_per_minute, fallback_account_id, secret_expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       account.id,
@@ -32,7 +33,8 @@ export class AccountRepository {
       account.fromName || null,
       account.dailyQuotaLimit || 10000,
       account.rateLimitPerMinute || 60,
-      account.fallbackAccountId || null
+      account.fallbackAccountId || null,
+      account.secretExpiresAt || null
     );
   }
 
@@ -74,6 +76,7 @@ export class AccountRepository {
     fallbackAccountId: string | null;
     isActive: boolean;
     credentials?: string;
+    secretExpiresAt?: string | null;
   }>): void {
     const fields: string[] = [];
     const params: any[] = [];
@@ -86,6 +89,7 @@ export class AccountRepository {
     if (updates.fallbackAccountId !== undefined) { fields.push('fallback_account_id = ?'); params.push(updates.fallbackAccountId); }
     if (updates.isActive !== undefined) { fields.push('is_active = ?'); params.push(updates.isActive ? 1 : 0); }
     if (updates.credentials !== undefined) { fields.push('credentials = ?'); params.push(updates.credentials); }
+    if (updates.secretExpiresAt !== undefined) { fields.push('secret_expires_at = ?'); params.push(updates.secretExpiresAt); }
 
     if (fields.length === 0) return;
 

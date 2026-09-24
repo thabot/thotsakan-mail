@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'bun:test';
 import { createTestDatabase } from '../helpers/test-db.js';
 import { AccountRepository } from '../../src/database/repositories/account.repository.js';
+import { EmailLogRepository } from '../../src/database/repositories/email-log.repository.js';
 import { CryptoService } from '../../src/services/crypto.service.js';
 import { TokenManagerService } from '../../src/services/token-manager.service.js';
 
 describe('TokenManagerService (Autonomous Token Refresh)', () => {
   const db = createTestDatabase();
   const accountRepo = new AccountRepository(db);
+  const logRepo = new EmailLogRepository(db);
   const cryptoService = new CryptoService('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
   const tokenManager = new TokenManagerService(accountRepo, cryptoService);
 
@@ -49,4 +51,28 @@ describe('TokenManagerService (Autonomous Token Refresh)', () => {
     expect(refreshedToken).toBe('mock_msal_token_2');
     expect(fetchCount).toBe(2);
   });
+
+  it('should be seamlessly executed via QueueWorker without manual token injection', async () => {
+    const { QueueWorker } = await import('../../src/workers/queue.worker.js');
+    const worker = new QueueWorker(db, { pollingIntervalMs: 50 });
+
+    logRepo.create({
+      jobId: 'job_m365_queue_test',
+      tenantId: 'tenant_test',
+      accountId: 'm365_acc',
+      toRecipients: ['recipient@test.com'],
+      subject: 'M365 Autonomous Queue Send',
+      priority: 'high',
+      isSync: false,
+    });
+
+    const job = logRepo.fetchNextJobForProcessing();
+    expect(job).not.toBeNull();
+    await worker.processJob(job);
+
+    const processedJob = logRepo.findById('job_m365_queue_test');
+    expect(processedJob?.status).toBe('SENT');
+    expect(processedJob?.provider_used).toBe('ms-graph');
+  });
 });
+

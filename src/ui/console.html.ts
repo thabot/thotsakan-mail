@@ -88,6 +88,17 @@ export function renderWebUI(): string {
       </div>
     </section>
 
+    <!-- Global Expiry / Warning Banner -->
+    <div id="warning-banner" class="hidden glass p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-lg animate-pulse">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i>
+        <span id="warning-banner-text">Warning message here</span>
+      </div>
+      <button onclick="document.getElementById('warning-banner').classList.add('hidden')" class="text-slate-400 hover:text-white text-xs">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
     <!-- Metrics Overview -->
     <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="glass p-5 rounded-2xl">
@@ -199,9 +210,14 @@ export function renderWebUI(): string {
             </h2>
             <p class="text-xs text-slate-400">Manage 14 cloud & SMTP providers with independent daily quotas and rate limits</p>
           </div>
-          <button onclick="loadAccounts()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
-            <i class="fa-solid fa-arrows-rotate"></i> Refresh
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="openAddAccountModal()" class="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+              <i class="fa-solid fa-plus"></i> Add Account
+            </button>
+            <button onclick="loadAccounts()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-arrows-rotate"></i> Refresh
+            </button>
+          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-300">
@@ -212,16 +228,193 @@ export function renderWebUI(): string {
                 <th class="px-4 py-3">Sender Email</th>
                 <th class="px-4 py-3">Daily Quota</th>
                 <th class="px-4 py-3">Rate Limit</th>
+                <th class="px-4 py-3">Health & Expiry</th>
                 <th class="px-4 py-3">Status</th>
                 <th class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="accounts-tbody" class="divide-y divide-slate-800">
-              <tr><td colspan="7" class="px-4 py-6 text-center text-slate-500">Loading accounts...</td></tr>
+              <tr><td colspan="8" class="px-4 py-6 text-center text-slate-500">Loading accounts...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
+    </section>
+
+    <!-- Modal: Add / Connect Email Account -->
+    <div id="modal-add-account" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="glass max-w-lg w-full p-6 rounded-2xl border border-slate-700 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-server text-indigo-400"></i> Connect Outbound Sender Account
+          </h3>
+          <button onclick="closeAddAccountModal()" class="text-slate-400 hover:text-white text-sm">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <form id="form-add-account" onsubmit="handleSaveAccount(event)" class="space-y-4 text-xs">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Account Name *</label>
+            <input type="text" id="acc-name" required placeholder="e.g. Microsoft 365 Production" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">From Email *</label>
+              <input type="email" id="acc-from-email" required placeholder="noreply@yourdomain.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">From Name (Display)</label>
+              <input type="text" id="acc-from-name" placeholder="System Notification" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Provider Type *</label>
+            <select id="acc-provider" onchange="handleProviderChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-indigo-500">
+              <option value="ms-graph">Microsoft 365 (MS Graph API - Autonomous Refresh)</option>
+              <option value="gmail">Google Workspace / Gmail (OAuth2)</option>
+              <option value="aws-ses">Amazon AWS SES</option>
+              <option value="resend">Resend</option>
+              <option value="sendgrid">SendGrid</option>
+              <option value="postmark">Postmark</option>
+              <option value="brevo">Brevo (Sendinblue)</option>
+              <option value="mailgun">Mailgun</option>
+              <option value="generic-smtp">Generic SMTP Relay</option>
+              <option value="mailersend">MailerSend</option>
+              <option value="zeptomail">ZeptoMail</option>
+              <option value="scaleway">Scaleway</option>
+              <option value="sparkpost">SparkPost</option>
+              <option value="mandrill">Mandrill</option>
+            </select>
+          </div>
+
+          <!-- Dynamic Container: Microsoft 365 MS Graph -->
+          <div id="fields-ms-graph" class="p-4 bg-slate-950/70 rounded-xl border border-indigo-500/30 space-y-3">
+            <div class="text-indigo-400 font-bold flex items-center gap-1.5">
+              <i class="fa-brands fa-microsoft"></i> Microsoft Entra ID (Azure) App Credentials
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              ใส่ค่าจาก Azure Portal (<code class="text-indigo-300">App registrations</code> พร้อมสิทธิ์ <code class="text-indigo-300">Mail.Send</code>) ระบบจะขอและต่ออายุ Token ให้อัตโนมัติตลอดชีพ
+            </p>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">Directory (Tenant) ID *</label>
+              <input type="text" id="m365-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">Application (Client) ID *</label>
+              <input type="text" id="m365-client-id" placeholder="yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">Client Secret Value *</label>
+              <input type="password" id="m365-client-secret" placeholder="Secret Value string" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">Client Secret Expiry Date (วันหมดอายุ Secret - สำหรับแจ้งเตือนล่วงหน้า)</label>
+              <input type="date" id="m365-secret-expiry" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs">
+            </div>
+          </div>
+
+          <!-- Dynamic Container: Google Workspace -->
+          <div id="fields-gmail" class="hidden p-4 bg-slate-950/70 rounded-xl border border-emerald-500/30 space-y-3">
+            <div class="text-emerald-400 font-bold flex items-center gap-1.5">
+              <i class="fa-brands fa-google"></i> Google Cloud OAuth2 Credentials
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">OAuth Client ID *</label>
+              <input type="text" id="google-client-id" placeholder="xxxx.apps.googleusercontent.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">OAuth Client Secret *</label>
+              <input type="password" id="google-client-secret" placeholder="GOCSPX-xxxx" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">Offline Refresh Token *</label>
+              <input type="password" id="google-refresh-token" placeholder="1//04xxxx" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+          </div>
+
+          <!-- Dynamic Container: AWS SES -->
+          <div id="fields-aws-ses" class="hidden p-4 bg-slate-950/70 rounded-xl border border-amber-500/30 space-y-3">
+            <div class="text-amber-400 font-bold flex items-center gap-1.5">
+              <i class="fa-brands fa-aws"></i> Amazon AWS SES Credentials
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Access Key ID *</label>
+                <input type="text" id="aws-key" placeholder="AKIA..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+              </div>
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Region *</label>
+                <input type="text" id="aws-region" value="ap-southeast-1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+              </div>
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium">Secret Access Key *</label>
+              <input type="password" id="aws-secret" placeholder="AWS Secret Key" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+          </div>
+
+          <!-- Dynamic Container: Generic SMTP -->
+          <div id="fields-generic-smtp" class="hidden p-4 bg-slate-950/70 rounded-xl border border-slate-700 space-y-3">
+            <div class="text-slate-200 font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-envelope"></i> SMTP Server Relay Settings
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div class="md:col-span-2">
+                <label class="block text-slate-300 mb-1 font-medium">Host *</label>
+                <input type="text" id="smtp-host" placeholder="mail.yourdomain.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs">
+              </div>
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Port *</label>
+                <input type="number" id="smtp-port" value="587" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs">
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">User</label>
+                <input type="text" id="smtp-user" placeholder="user@domain.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs">
+              </div>
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Password</label>
+                <input type="password" id="smtp-pass" placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs">
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Container: Standard SaaS API Key (Resend, SendGrid, Postmark, Brevo, Mailgun, ฯลฯ) -->
+          <div id="fields-standard-api" class="hidden p-4 bg-slate-950/70 rounded-xl border border-slate-700 space-y-3">
+            <div class="text-slate-200 font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-key"></i> SaaS Provider API Key
+            </div>
+            <div>
+              <label class="block text-slate-300 mb-1 font-medium" id="lbl-standard-api-key">API Key *</label>
+              <input type="password" id="standard-api-key" placeholder="API Key / Token" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+            </div>
+          </div>
+
+          <!-- Rate Limits & Quota -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Daily Quota Limit</label>
+              <input type="number" id="acc-daily-quota" value="10000" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Rate Limit (per min)</label>
+              <input type="number" id="acc-rate-limit" value="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
+            <button type="button" onclick="closeAddAccountModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
+            <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center gap-1.5 shadow-lg">
+              <i class="fa-solid fa-save"></i> Save Account
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
     </section>
 
     <!-- TAB 3: Routing Rules Management -->
@@ -492,6 +685,112 @@ export function renderWebUI(): string {
       } catch (e) {}
     }
 
+    function openAddAccountModal() {
+      document.getElementById('modal-add-account').classList.remove('hidden');
+      handleProviderChange();
+    }
+
+    function closeAddAccountModal() {
+      document.getElementById('modal-add-account').classList.add('hidden');
+    }
+
+    function handleProviderChange() {
+      const p = document.getElementById('acc-provider').value;
+      ['ms-graph', 'gmail', 'aws-ses', 'generic-smtp', 'standard-api'].forEach(id => {
+        const el = document.getElementById('fields-' + id);
+        if (el) el.classList.add('hidden');
+      });
+
+      if (p === 'ms-graph') {
+        document.getElementById('fields-ms-graph').classList.remove('hidden');
+      } else if (p === 'gmail') {
+        document.getElementById('fields-gmail').classList.remove('hidden');
+      } else if (p === 'aws-ses') {
+        document.getElementById('fields-aws-ses').classList.remove('hidden');
+      } else if (p === 'generic-smtp') {
+        document.getElementById('fields-generic-smtp').classList.remove('hidden');
+      } else {
+        document.getElementById('fields-standard-api').classList.remove('hidden');
+        document.getElementById('lbl-standard-api-key').textContent = p.toUpperCase() + ' API Key *';
+      }
+    }
+
+    async function handleSaveAccount(e) {
+      e.preventDefault();
+      const p = document.getElementById('acc-provider').value;
+      const name = document.getElementById('acc-name').value.trim();
+      const fromEmail = document.getElementById('acc-from-email').value.trim();
+      const fromName = document.getElementById('acc-from-name').value.trim();
+      const dailyQuotaLimit = parseInt(document.getElementById('acc-daily-quota').value) || 10000;
+      const rateLimitPerMinute = parseInt(document.getElementById('acc-rate-limit').value) || 60;
+
+      let credentials = {};
+      let secretExpiresAt = null;
+
+      if (p === 'ms-graph') {
+        credentials = {
+          tenantId: document.getElementById('m365-tenant-id').value.trim(),
+          clientId: document.getElementById('m365-client-id').value.trim(),
+          clientSecret: document.getElementById('m365-client-secret').value.trim(),
+        };
+        const exp = document.getElementById('m365-secret-expiry').value;
+        if (exp) secretExpiresAt = new Date(exp).toISOString();
+      } else if (p === 'gmail') {
+        credentials = {
+          clientId: document.getElementById('google-client-id').value.trim(),
+          clientSecret: document.getElementById('google-client-secret').value.trim(),
+          refreshToken: document.getElementById('google-refresh-token').value.trim(),
+        };
+      } else if (p === 'aws-ses') {
+        credentials = {
+          apiKey: document.getElementById('aws-key').value.trim(),
+          secretKey: document.getElementById('aws-secret').value.trim(),
+          region: document.getElementById('aws-region').value.trim() || 'ap-southeast-1',
+        };
+      } else if (p === 'generic-smtp') {
+        credentials = {
+          host: document.getElementById('smtp-host').value.trim(),
+          port: parseInt(document.getElementById('smtp-port').value) || 587,
+          secure: parseInt(document.getElementById('smtp-port').value) === 465,
+          user: document.getElementById('smtp-user').value.trim(),
+          pass: document.getElementById('smtp-pass').value.trim(),
+        };
+      } else {
+        credentials = {
+          apiKey: document.getElementById('standard-api-key').value.trim(),
+        };
+      }
+
+      const payload = {
+        name,
+        providerType: p,
+        fromEmail,
+        fromName: fromName || undefined,
+        dailyQuotaLimit,
+        rateLimitPerMinute,
+        credentials,
+        secretExpiresAt: secretExpiresAt || undefined,
+      };
+
+      try {
+        const res = await fetch('/v1/accounts', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert('🎉 Account Connected Successfully!');
+          closeAddAccountModal();
+          loadAccounts();
+        } else {
+          alert('❌ Failed to create account: ' + (data.error || JSON.stringify(data)));
+        }
+      } catch (err) {
+        alert('Request failed: ' + err.message);
+      }
+    }
+
     async function loadAccounts() {
       try {
         const res = await fetch('/v1/accounts', { headers: getAuthHeaders() });
@@ -499,16 +798,37 @@ export function renderWebUI(): string {
           const data = await res.json();
           const tbody = document.getElementById('accounts-tbody');
           if (!data.accounts || data.accounts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-slate-500">No outbound accounts registered yet</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-6 text-center text-slate-500">No outbound accounts registered yet</td></tr>';
             return;
           }
-          tbody.innerHTML = data.accounts.map(acc => \`
+
+          // Check for any expiring secrets across accounts to show top banner
+          const warnings = data.accounts.filter(a => a.warning);
+          const banner = document.getElementById('warning-banner');
+          if (warnings.length > 0) {
+            const first = warnings[0];
+            document.getElementById('warning-banner-text').innerHTML = 
+              '<strong>คำเตือนการบำรุงรักษา:</strong> บัญชี <em>' + first.name + '</em> (' + first.provider_type + ') - ' + first.warning.message;
+            banner.classList.remove('hidden');
+          } else {
+            banner.classList.add('hidden');
+          }
+
+          tbody.innerHTML = data.accounts.map(acc => {
+            const healthBadge = acc.warning 
+              ? '<span class="px-2 py-0.5 rounded text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 w-max"><i class="fa-solid fa-triangle-exclamation"></i> ' + acc.warning.remainingDays + ' วันหมดอายุ</span>'
+              : (acc.secret_expires_at 
+                ? '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-800 text-slate-300">Exp: ' + new Date(acc.secret_expires_at).toLocaleDateString() + '</span>' 
+                : '<span class="text-slate-500">-</span>');
+
+            return \`
             <tr class="hover:bg-slate-800/40 transition">
               <td class="px-4 py-3 font-bold text-white">\${acc.name}</td>
               <td class="px-4 py-3 font-mono text-indigo-400">\${acc.provider_type}</td>
               <td class="px-4 py-3 text-slate-300">\${acc.from_email}</td>
               <td class="px-4 py-3 text-slate-300">\${acc.daily_quota_limit.toLocaleString()} / day</td>
               <td class="px-4 py-3 text-slate-300">\${acc.rate_limit_per_minute} / min</td>
+              <td class="px-4 py-3">\${healthBadge}</td>
               <td class="px-4 py-3">
                 <span class="px-2 py-0.5 rounded-full text-xs \${acc.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
                   \${acc.is_active ? 'Active' : 'Disabled'}
@@ -518,7 +838,8 @@ export function renderWebUI(): string {
                 <button onclick="testAccount('\${acc.id}')" class="px-2 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded transition mr-1">Test</button>
               </td>
             </tr>
-          \`).join('');
+            \`;
+          }).join('');
         }
       } catch (e) {}
     }
