@@ -19,6 +19,11 @@ export const envSchema = z.object({
   DEAD_LETTER_WEBHOOK_URL: z.string().url().optional().or(z.literal('')),
   LOG_RETENTION_DAYS: z.coerce.number().default(90),
   OPS_PORTAL_URL: z.string().url().default('https://thotsakan-ops.thabot47.workers.dev'),
+  NOWPAYMENTS_API_KEY: z.string().optional(),
+  NOWPAYMENTS_IPN_SECRET: z.string().optional(),
+  NOWPAYMENTS_PUBLIC_KEY: z.string().optional(),
+  NOWPAYMENTS_PAYOUT_WALLET_ADDRESS: z.string().optional(),
+  NOWPAYMENTS_WEBHOOK_URL: z.string().url().optional().or(z.literal('')),
   TELEMETRY_INTERVAL_MS: z.coerce.number().default(300_000), // 5 minutes
   TELEMETRY_ENABLED: z
     .string()
