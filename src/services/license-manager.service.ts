@@ -12,7 +12,7 @@ import { ClusterCoordinatorService } from './cluster-coordinator.service.js';
 
 // Default Master Public Key (Ed25519) for verification
 export const DEFAULT_PUBLIC_KEY_SPKI = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEANkU1bVpCZXFwOGJ4Y1p5MmN6WDFkVGNpY09GZ1Z0TXh5dXZ3
+MCowBQYDK2VwAyEAdI4FTjxw5aM7er3/ZhfOMNB3CpaCkyhkLswfGoR4yz8=
 -----END PUBLIC KEY-----`;
 
 export interface LicenseManagerOptions {
