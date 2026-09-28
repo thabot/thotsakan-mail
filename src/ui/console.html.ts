@@ -569,9 +569,14 @@ export function renderWebUI(): string {
           </h2>
           <p class="text-xs text-slate-400 mt-1">Cryptographic Ed25519 Hardware-Bound License & Disaster Recovery Control</p>
         </div>
-        <button onclick="loadLicenseInfo()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-arrows-rotate"></i> Refresh
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="openLicenseCheckoutModal()" class="text-xs px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+            <i class="fa-solid fa-cart-shopping"></i> Buy / Upgrade License (Card & Crypto)
+          </button>
+          <button onclick="loadLicenseInfo()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -620,6 +625,83 @@ export function renderWebUI(): string {
         </div>
       </div>
     </section>
+
+    <!-- Modal: Sphere Pay License Checkout -->
+    <div id="modal-license-checkout" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
+              <i class="fa-solid fa-cart-shopping"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">Purchase License (Sphere Pay)</h3>
+              <p class="text-[11px] text-slate-400">Card On-Ramp & Direct Crypto Wallet Settlement</p>
+            </div>
+          </div>
+          <button onclick="closeLicenseCheckoutModal()" class="text-slate-400 hover:text-white transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <form id="licenseCheckoutForm" onsubmit="initiateSphereCheckout(event)" class="p-6 space-y-4">
+          <!-- Tier Selection -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">Select License Tier</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="cursor-pointer border border-slate-800 rounded-xl p-3 bg-slate-950/60 hover:border-indigo-500 transition block relative">
+                <input type="radio" name="checkoutTier" value="PRO" checked class="absolute top-3 right-3 text-indigo-600 focus:ring-0">
+                <div class="font-bold text-white text-sm">PRO Tier</div>
+                <div class="text-emerald-400 font-extrabold text-lg mt-0.5">$49 <span class="text-[10px] text-slate-500 font-normal">/ year</span></div>
+                <div class="text-[11px] text-slate-400 mt-1">Single Node • 14 Providers • Template Editor • Failover</div>
+              </label>
+              <label class="cursor-pointer border border-slate-800 rounded-xl p-3 bg-slate-950/60 hover:border-indigo-500 transition block relative">
+                <input type="radio" name="checkoutTier" value="ENTERPRISE" class="absolute top-3 right-3 text-indigo-600 focus:ring-0">
+                <div class="font-bold text-white text-sm">ENTERPRISE</div>
+                <div class="text-indigo-400 font-extrabold text-lg mt-0.5">$199 <span class="text-[10px] text-slate-500 font-normal">/ year</span></div>
+                <div class="text-[11px] text-slate-400 mt-1">Multi-Node Cluster • Custom Rate Limits • Priority Failover</div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Customer Email -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Customer / Organization Email</label>
+            <input type="email" id="checkout-email" required placeholder="billing@yourdomain.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <!-- Target Machine ID -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-semibold text-slate-300">Target Machine ID (Auto-Detected)</label>
+              <span class="text-[10px] text-emerald-400 font-mono">Bound to Current Node</span>
+            </div>
+            <input type="text" id="checkout-machine-id" readonly class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs font-mono text-indigo-300 select-all cursor-not-allowed">
+          </div>
+
+          <!-- Payment Methods Accepted Badge -->
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 space-y-1.5">
+            <div class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-shield-check text-emerald-400"></i> Supported Payment Channels:
+            </div>
+            <div class="text-[10px] text-slate-400 flex flex-wrap items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300"><i class="fa-brands fa-cc-visa text-blue-400 mr-1"></i> Visa / Mastercard</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300"><i class="fa-brands fa-apple text-slate-200 mr-1"></i> Apple Pay</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300"><i class="fa-brands fa-google text-slate-200 mr-1"></i> Google Pay</span>
+              <span class="px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">🪙 Solana / USDC / USDT / ETH</span>
+            </div>
+          </div>
+
+          <!-- Checkout State Display -->
+          <div id="checkout-state-box" class="hidden p-3 rounded-xl border font-mono text-xs"></div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="btn-proceed-checkout" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+            <i class="fa-solid fa-lock"></i> Proceed to Secure Sphere Pay Checkout
+          </button>
+        </form>
+      </div>
+    </div>
   </main>
 
 
@@ -996,28 +1078,147 @@ export function renderWebUI(): string {
       alert('Machine ID copied to clipboard: ' + text);
     }
 
-    async function activateLicenseKey() {
-      const key = document.getElementById('lic-input-key').value.trim();
-      if (!key) {
-        alert('Please paste a license key token');
+    let checkoutPollTimer = null;
+
+    function openLicenseCheckoutModal() {
+      const machineId = document.getElementById('lic-machine-id').textContent.trim();
+      if (machineId && machineId !== 'loading...') {
+        document.getElementById('checkout-machine-id').value = machineId;
+      }
+      document.getElementById('modal-license-checkout').classList.remove('hidden');
+    }
+
+    function closeLicenseCheckoutModal() {
+      document.getElementById('modal-license-checkout').classList.add('hidden');
+      if (checkoutPollTimer) {
+        clearInterval(checkoutPollTimer);
+        checkoutPollTimer = null;
+      }
+      const stateBox = document.getElementById('checkout-state-box');
+      stateBox.classList.add('hidden');
+      stateBox.innerHTML = '';
+      document.getElementById('btn-proceed-checkout').disabled = false;
+    }
+
+    async function initiateSphereCheckout(e) {
+      e.preventDefault();
+      const email = document.getElementById('checkout-email').value.trim();
+      const machineId = document.getElementById('checkout-machine-id').value.trim();
+      const tierInput = document.querySelector('input[name="checkoutTier"]:checked');
+      const tier = tierInput ? tierInput.value : 'PRO';
+
+      if (!email) {
+        alert('Please enter your email address');
         return;
       }
+
+      const stateBox = document.getElementById('checkout-state-box');
+      const btn = document.getElementById('btn-proceed-checkout');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Generating Sphere Pay Link...';
+
+      stateBox.classList.remove('hidden');
+      stateBox.className = 'p-3 rounded-xl border border-indigo-500/30 bg-indigo-950/40 text-indigo-300 font-mono text-xs space-y-1.5';
+      stateBox.innerHTML = '<div>⏳ Connecting to Sphere Pay Crypto Gateway...</div>';
+
       try {
-        const res = await fetch('/v1/license/activate', {
+        // Ops portal URL or local proxy
+        const portalUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+          ? 'https://thotsakan-ops.thabot47.workers.dev' 
+          : window.location.origin;
+
+        const res = await fetch(portalUrl + '/api/v1/checkout/sphere/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ license_key: key })
+          body: JSON.stringify({
+            tier,
+            customerEmail: email,
+            targetMachineId: machineId || undefined,
+            durationDays: 365,
+          })
         });
+
         const data = await res.json();
-        if (data.success) {
-          alert('🎉 License Activated Successfully! Tier: ' + data.result.tier);
-          loadLicenseInfo();
+        if (data.success && data.checkoutUrl) {
+          stateBox.innerHTML = \`
+            <div class="text-emerald-400 font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Checkout Session Created!
+            </div>
+            <div class="text-slate-300 text-[11px]">Payment URL opened in new tab. Waiting for on-chain/card confirmation...</div>
+            <a href="\${data.checkoutUrl}" target="_blank" class="block text-indigo-400 font-bold underline break-all mt-1">Open Sphere Pay Checkout</a>
+          \`;
+
+          // Open in popup or new tab
+          window.open(data.checkoutUrl, '_blank');
+
+          // Start Polling for Confirmation
+          btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Awaiting Payment Confirmation...';
+          startSpherePaymentPolling(portalUrl, data.paymentId);
         } else {
-          alert('❌ License activation failed: ' + (data.error || 'Invalid or expired key'));
+          stateBox.className = 'p-3 rounded-xl border border-rose-500/30 bg-rose-950/40 text-rose-300 font-mono text-xs';
+          stateBox.innerHTML = '❌ ' + (data.error || 'Failed to create Sphere checkout session');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Try Again';
         }
       } catch (err) {
-        alert('Activation failed: ' + err.message);
+        stateBox.className = 'p-3 rounded-xl border border-rose-500/30 bg-rose-950/40 text-rose-300 font-mono text-xs';
+        stateBox.innerHTML = '❌ Network Error: ' + err.message;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Try Again';
       }
+    }
+
+    function startSpherePaymentPolling(portalUrl, paymentId) {
+      if (checkoutPollTimer) clearInterval(checkoutPollTimer);
+
+      let attempts = 0;
+      checkoutPollTimer = setInterval(async () => {
+        attempts++;
+        if (attempts > 120) { // 10 minutes timeout
+          clearInterval(checkoutPollTimer);
+          const stateBox = document.getElementById('checkout-state-box');
+          stateBox.innerHTML = '<div class="text-amber-400">⏱️ Checkout session timed out. If you paid, paste the key manually or refresh.</div>';
+          return;
+        }
+
+        try {
+          const res = await fetch(portalUrl + '/api/v1/checkout/sphere/status/' + paymentId);
+          if (!res.ok) return;
+          const data = await res.json();
+
+          if (data.status === 'succeeded' && data.license && data.license.licenseKey) {
+            clearInterval(checkoutPollTimer);
+            checkoutPollTimer = null;
+
+            const stateBox = document.getElementById('checkout-state-box');
+            stateBox.className = 'p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/40 text-emerald-300 font-mono text-xs space-y-1';
+            stateBox.innerHTML = \`
+              <div class="font-bold text-emerald-400">🎉 Payment Confirmed on Sphere Pay!</div>
+              <div class="text-slate-300">Activating signed license key on this node...</div>
+            \`;
+
+            // Auto-Activate Key on local node
+            const actRes = await fetch('/v1/license/activate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ license_key: data.license.licenseKey })
+            });
+            const actData = await actRes.json();
+
+            if (actData.success) {
+              stateBox.innerHTML += \`
+                <div class="text-white font-bold mt-1">✅ License Activated Successfully! (Tier: \${actData.result.tier})</div>
+              \`;
+              document.getElementById('lic-input-key').value = data.license.licenseKey;
+              loadLicenseInfo();
+              setTimeout(() => {
+                closeLicenseCheckoutModal();
+                alert('🎉 Congratulations! Your ' + actData.result.tier + ' license is now ACTIVE!');
+              }, 2000);
+            }
+          }
+        } catch (e) {}
+      }, 3000);
     }
 
     function switchTab(tab) {
