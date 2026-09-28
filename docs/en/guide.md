@@ -715,6 +715,14 @@ docker run -d --name thotsakan \
   -v $(pwd)/data:/app/data \
   ghcr.io/thabot/thotsakan-mail:latest
 ```
-Access the Web Management Console at `http://localhost:9547` and interactive Swagger docs at `http://localhost:9547/docs`.
+## 10. Purchase & Activate Licenses with Sphere Pay (Card & Crypto)
+
+1. Open Web Console at `http://localhost:9547/`
+2. Navigate to the **"License & Node Identity"** tab.
+3. Click the green button: **"Buy / Upgrade License (Card & Crypto)"**.
+4. Choose your entitlement tier (**PRO Tier \$49/year** or **ENTERPRISE Tier \$199/year**).
+5. Enter your billing email (your Node Machine ID is auto-detected and prefilled).
+6. Click **"Proceed to Secure Sphere Pay Checkout"** to pay via Credit/Debit Card (Visa, Mastercard, Apple Pay, Google Pay) or Crypto Wallets (Solana, Phantom, MetaMask, USDC, USDT, SOL, ETH).
+7. Upon payment confirmation, the console will automatically activate your signed Ed25519 license token without needing a server restart.
 
 
