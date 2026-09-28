@@ -725,20 +725,20 @@ docker run -d --name thotsakan \
   - พัฒนาระบบบันทึกและตรวจสอบ Rate Limit แบบ Rolling Window ลงในฐานข้อมูล SQLite WAL (`rate_limit_events`) เพื่อรองรับการรัน Thotsakan แบบ **Multi-Container (หลาย Instance บนเครื่องเดียวกันหรือข้ามเครื่องผ่าน Shared Volume)**
   - **Zero Extra Infrastructure:** ไม่ต้องติดตั้ง Redis หรือ External Database เพิ่มเติม ยังคงรักษามาตรฐาน Single-Stack และ RAM ต่ำกว่า 40MB
   - **รับประกันความปลอดภัย 100%:** ทุก Container จะแบ่งปันข้อมูลยอดส่งร่วมกันแบบ Realtime ทำให้ไม่มีทางส่งเกินขีดจำกัดของผู้ให้บริการภายนอก (AWS SES, Google Workspace, Microsoft 365, Resend ฯลฯ) เมื่อสเกลโหลดสูง
-- **[เสร็จสมบูรณ์แล้ว] Autonomous Crypto & Card License Checkout (Sphere Pay):**
-  - **ชำระเงินตรงเข้ากระเป๋าคริปโต (Direct-to-Crypto Settlement):** ลูกค้าสามารถสั่งซื้อสิทธิ์ License PRO / ENTERPRISE ผ่าน Sphere Pay (https://spherepay.co) ได้โดยตรงจากหน้า Web Console โดยเงินจะเข้ากระเป๋าคริปโต (USDC/SOL) ของผู้ให้บริการทันทีโดยไม่ต้องผ่านบัญชีธนาคารแบบเดิม
-  - **รองรับทั้งบัตรเครดิตและกระเป๋าคริปโต (Card On-Ramp & Crypto Wallets):** รองรับ Visa, Mastercard, Apple Pay, Google Pay ควบคู่กับกระเป๋าคริปโต Phantom, MetaMask, Solana Pay, WalletConnect (USDC, USDT, SOL, ETH)
-  - **ระบบ Auto-Activation ทันที:** เมื่อธุรกรรมยืนยัน Webhook จะสั่งให้ Ops Portal ออก Ed25519 Signed Token และเปิดใช้งานบนโหนดเครื่องทันทีแบบอัตโนมัติ
+- **[เสร็จสมบูรณ์แล้ว] Autonomous Crypto & Card License Checkout (NOWPayments & Gate.io):**
+  - **ชำระเงินตรงเข้ากระเป๋าคริปโต (Direct-to-Crypto Settlement):** ลูกค้าสามารถสั่งซื้อสิทธิ์ License PRO / ENTERPRISE ผ่าน NOWPayments (https://nowpayments.io) ได้โดยตรงจากหน้า Web Console โดยเงินจะเข้ากระเป๋าคริปโต (Gate.io EVM / Polygon / BSC) ของผู้ให้บริการทันที
+  - **รองรับทั้งบัตรเครดิตและเหรียญคริปโตกว่า 300+ ชนิด:** รองรับ Visa, Mastercard, Apple Pay, Google Pay ควบคู่กับเหรียญคริปโตยอดนิยม (USDT, USDC, BTC, ETH, SOL, MATIC, BNB)
+  - **ระบบ Auto-Activation ทันที:** เมื่อธุรกรรมยืนยัน Webhook IPN จะสั่งให้ Ops Authority ออก Ed25519 Signed Token และเปิดใช้งานบนโหนดเครื่องทันทีแบบอัตโนมัติ
 
 ---
 
-## 11. การสั่งซื้อและต่ออายุ License ผ่านระบบ Sphere Pay (Card & Crypto)
+## 11. การสั่งซื้อและต่ออายุ License ผ่านระบบ NOWPayments (Card & Crypto)
 
 1. เข้าหน้า Web Console ที่ `http://localhost:9547/`
 2. ไปที่แท็บ **"License & Node Identity"**
 3. คลิกปุ่มสีเขียว **"Buy / Upgrade License (Card & Crypto)"**
 4. เลือกระดับสิทธิ์ที่ต้องการ (**PRO Tier $49/ปี** หรือ **ENTERPRISE Tier $199/ปี**)
 5. กรอกอีเมลสำหรับรับใบเสร็จและรหัส License (ระบบจะตรวจจับ Machine ID ของเครื่องให้อัตโนมัติ)
-6. คลิก **"Proceed to Secure Sphere Pay Checkout"** เพื่อชำระเงินด้วยบัตรเครดิต/เดบิต หรือโอนเหรียญคริปโตผ่านกระเป๋าเงิน Web3
+6. คลิก **"Proceed to Secure Crypto & Card Checkout"** เพื่อเลือกชำระเงินด้วยบัตรเครดิต/เดบิต หรือโอนเหรียญคริปโต
 7. เมื่อชำระเงินสำเร็จ หน้าจอจะตรวจจับผลการยืนยันและทำการ Activate สิทธิ์ PRO หรือ ENTERPRISE ให้ทันที
 

@@ -6,10 +6,10 @@ import { FeatureGateService } from '../../src/services/feature-gate.service.js';
 import { createLicenseRoute } from '../../src/api/routes/license.route.js';
 import { generateTestKeys, createSignedTestLicense } from '../helpers/license-test-keys.js';
 
-describe('Unit: License Sphere Pay Checkout UI & Activation Flow', async () => {
+describe('Unit: License NOWPayments & Crypto Checkout UI & Activation Flow', async () => {
   const { publicSpki, privateKey } = await generateTestKeys();
 
-  it('should render Sphere Pay checkout button and modal with Card & Crypto payment badges in Web Console', () => {
+  it('should render NOWPayments checkout button and modal with Card & Crypto payment badges in Web Console', () => {
     const html = renderWebUI();
     
     // Verify Purchase Button
@@ -18,6 +18,7 @@ describe('Unit: License Sphere Pay Checkout UI & Activation Flow', async () => {
 
     // Verify Modal & Pricing Tiers
     expect(html).toContain('modal-license-checkout');
+    expect(html).toContain('Purchase License (NOWPayments)');
     expect(html).toContain('PRO Tier');
     expect(html).toContain('$49');
     expect(html).toContain('ENTERPRISE');
@@ -26,18 +27,20 @@ describe('Unit: License Sphere Pay Checkout UI & Activation Flow', async () => {
     // Verify Multi-Channel Payment Badges
     expect(html).toContain('Visa / Mastercard');
     expect(html).toContain('Apple Pay');
-    expect(html).toContain('Solana / USDC / USDT / ETH');
+    expect(html).toContain('USDT / USDC (Polygon, BSC)');
+    expect(html).toContain('BTC / ETH / SOL & 300+ Coins');
 
     // Verify Machine ID binding input
     expect(html).toContain('checkout-machine-id');
     expect(html).toContain('Bound to Current Node');
 
     // Verify Script Functions
+    expect(html).toContain('initiateLicenseCheckout');
     expect(html).toContain('initiateSphereCheckout');
-    expect(html).toContain('startSpherePaymentPolling');
+    expect(html).toContain('startLicensePaymentPolling');
   });
 
-  it('should seamlessly auto-activate PRO license token generated after Sphere Pay checkout', async () => {
+  it('should seamlessly auto-activate PRO license token generated after NOWPayments checkout', async () => {
     const licenseManager = new LicenseManagerService(publicSpki);
     const featureGate = new FeatureGateService(licenseManager);
 
@@ -50,10 +53,10 @@ describe('Unit: License Sphere Pay Checkout UI & Activation Flow', async () => {
     expect(initialJson.tier).toBe('COMMUNITY');
     expect(featureGate.canAccessWebUI()).toBe(false);
 
-    // Simulate Sphere Pay Webhook generated signed token for PRO tier
+    // Simulate NOWPayments Webhook generated signed token for PRO tier
     const proToken = await createSignedTestLicense(privateKey, {
       tier: 'PRO',
-      sub: 'cust_sphere_buyer_01',
+      sub: 'cust_nowpayments_buyer_01',
       features: ['web_ui', 'visual_template_editor', 'smart_failover'],
       instance_limit: 1,
     });

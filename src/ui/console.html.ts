@@ -626,7 +626,7 @@ export function renderWebUI(): string {
       </div>
     </section>
 
-    <!-- Modal: Sphere Pay License Checkout -->
+    <!-- Modal: License Checkout (NOWPayments & Gate.io) -->
     <div id="modal-license-checkout" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
       <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
@@ -635,8 +635,8 @@ export function renderWebUI(): string {
               <i class="fa-solid fa-cart-shopping"></i>
             </div>
             <div>
-              <h3 class="text-sm font-bold text-white">Purchase License (Sphere Pay)</h3>
-              <p class="text-[11px] text-slate-400">Card On-Ramp & Direct Crypto Wallet Settlement</p>
+              <h3 class="text-sm font-bold text-white">Purchase License (NOWPayments)</h3>
+              <p class="text-[11px] text-slate-400">Card & Instant Crypto Settlement (Gate.io)</p>
             </div>
           </div>
           <button onclick="closeLicenseCheckoutModal()" class="text-slate-400 hover:text-white transition">
@@ -644,7 +644,7 @@ export function renderWebUI(): string {
           </button>
         </div>
 
-        <form id="licenseCheckoutForm" onsubmit="initiateSphereCheckout(event)" class="p-6 space-y-4">
+        <form id="licenseCheckoutForm" onsubmit="initiateLicenseCheckout(event)" class="p-6 space-y-4">
           <!-- Tier Selection -->
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-2">Select License Tier</label>
@@ -688,7 +688,8 @@ export function renderWebUI(): string {
               <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300"><i class="fa-brands fa-cc-visa text-blue-400 mr-1"></i> Visa / Mastercard</span>
               <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300"><i class="fa-brands fa-apple text-slate-200 mr-1"></i> Apple Pay</span>
               <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300"><i class="fa-brands fa-google text-slate-200 mr-1"></i> Google Pay</span>
-              <span class="px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">🪙 Solana / USDC / USDT / ETH</span>
+              <span class="px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">🪙 USDT / USDC (Polygon, BSC)</span>
+              <span class="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/30">⚡ BTC / ETH / SOL & 300+ Coins</span>
             </div>
           </div>
 
@@ -697,7 +698,7 @@ export function renderWebUI(): string {
 
           <!-- Submit Button -->
           <button type="submit" id="btn-proceed-checkout" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
-            <i class="fa-solid fa-lock"></i> Proceed to Secure Sphere Pay Checkout
+            <i class="fa-solid fa-lock"></i> Proceed to Secure Crypto & Card Checkout
           </button>
         </form>
       </div>
@@ -1100,7 +1101,7 @@ export function renderWebUI(): string {
       document.getElementById('btn-proceed-checkout').disabled = false;
     }
 
-    async function initiateSphereCheckout(e) {
+    async function initiateLicenseCheckout(e) {
       e.preventDefault();
       const email = document.getElementById('checkout-email').value.trim();
       const machineId = document.getElementById('checkout-machine-id').value.trim();
@@ -1115,11 +1116,11 @@ export function renderWebUI(): string {
       const stateBox = document.getElementById('checkout-state-box');
       const btn = document.getElementById('btn-proceed-checkout');
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Generating Sphere Pay Link...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Connecting to NOWPayments Gateway...';
 
       stateBox.classList.remove('hidden');
       stateBox.className = 'p-3 rounded-xl border border-indigo-500/30 bg-indigo-950/40 text-indigo-300 font-mono text-xs space-y-1.5';
-      stateBox.innerHTML = '<div>⏳ Connecting to Sphere Pay Crypto Gateway...</div>';
+      stateBox.innerHTML = '<div>⏳ Initializing Secure Checkout Session (Crypto & Card)...</div>';
 
       try {
         // Ops portal URL or local proxy
@@ -1127,7 +1128,7 @@ export function renderWebUI(): string {
           ? 'https://thotsakan-ops.thabot47.workers.dev' 
           : window.location.origin;
 
-        const res = await fetch(portalUrl + '/api/v1/checkout/sphere/create', {
+        const res = await fetch(portalUrl + '/api/v1/checkout/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1145,7 +1146,7 @@ export function renderWebUI(): string {
               <i class="fa-solid fa-arrow-up-right-from-square"></i> Checkout Session Created!
             </div>
             <div class="text-slate-300 text-[11px]">Payment URL opened in new tab. Waiting for on-chain/card confirmation...</div>
-            <a href="\${data.checkoutUrl}" target="_blank" class="block text-indigo-400 font-bold underline break-all mt-1">Open Sphere Pay Checkout</a>
+            <a href="\${data.checkoutUrl}" target="_blank" class="block text-indigo-400 font-bold underline break-all mt-1">Open Payment Checkout Page</a>
           \`;
 
           // Open in popup or new tab
@@ -1153,10 +1154,10 @@ export function renderWebUI(): string {
 
           // Start Polling for Confirmation
           btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Awaiting Payment Confirmation...';
-          startSpherePaymentPolling(portalUrl, data.paymentId);
+          startLicensePaymentPolling(portalUrl, data.paymentId);
         } else {
           stateBox.className = 'p-3 rounded-xl border border-rose-500/30 bg-rose-950/40 text-rose-300 font-mono text-xs';
-          stateBox.innerHTML = '❌ ' + (data.error || 'Failed to create Sphere checkout session');
+          stateBox.innerHTML = '❌ ' + (data.error || 'Failed to create checkout session');
           btn.disabled = false;
           btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Try Again';
         }
@@ -1168,7 +1169,10 @@ export function renderWebUI(): string {
       }
     }
 
-    function startSpherePaymentPolling(portalUrl, paymentId) {
+    // Alias for backward compatibility
+    const initiateSphereCheckout = initiateLicenseCheckout;
+
+    function startLicensePaymentPolling(portalUrl, paymentId) {
       if (checkoutPollTimer) clearInterval(checkoutPollTimer);
 
       let attempts = 0;
@@ -1182,7 +1186,7 @@ export function renderWebUI(): string {
         }
 
         try {
-          const res = await fetch(portalUrl + '/api/v1/checkout/sphere/status/' + paymentId);
+          const res = await fetch(portalUrl + '/api/v1/checkout/status/' + paymentId);
           if (!res.ok) return;
           const data = await res.json();
 
@@ -1193,7 +1197,7 @@ export function renderWebUI(): string {
             const stateBox = document.getElementById('checkout-state-box');
             stateBox.className = 'p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/40 text-emerald-300 font-mono text-xs space-y-1';
             stateBox.innerHTML = \`
-              <div class="font-bold text-emerald-400">🎉 Payment Confirmed on Sphere Pay!</div>
+              <div class="font-bold text-emerald-400">🎉 Payment Confirmed!</div>
               <div class="text-slate-300">Activating signed license key on this node...</div>
             \`;
 
@@ -1220,6 +1224,8 @@ export function renderWebUI(): string {
         } catch (e) {}
       }, 3000);
     }
+
+    const startSpherePaymentPolling = startLicensePaymentPolling;
 
     function switchTab(tab) {
       ['quick-send', 'accounts', 'rules', 'suppression', 'dns-verify', 'logs', 'license'].forEach(t => {
