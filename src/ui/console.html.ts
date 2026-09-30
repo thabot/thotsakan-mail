@@ -67,7 +67,10 @@ export function renderWebUI(): string {
             Configure Providers
           </div>
           <p class="text-slate-400 mb-2">Connect AWS SES, Gmail, Resend, or Generic SMTP in the Accounts tab.</p>
-          <button onclick="switchTab('accounts')" class="text-indigo-400 hover:text-indigo-300 font-semibold underline">Manage Accounts &rarr;</button>
+          <div class="flex items-center gap-3">
+            <button onclick="switchTab('accounts')" class="text-indigo-400 hover:text-indigo-300 font-semibold underline">Manage Accounts &rarr;</button>
+            <button onclick="switchTab('guides')" class="text-slate-400 hover:text-indigo-300 underline">Provider Guides &rarr;</button>
+          </div>
         </div>
         <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
           <div class="font-bold text-emerald-400 flex items-center gap-1.5 mb-1">
@@ -130,6 +133,9 @@ export function renderWebUI(): string {
       </button>
       <button onclick="switchTab('accounts')" id="tab-btn-accounts" class="px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap">
         <i class="fa-solid fa-server mr-1.5"></i> Outbound Accounts
+      </button>
+      <button onclick="switchTab('guides')" id="tab-btn-guides" class="px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap">
+        <i class="fa-solid fa-book-bookmark mr-1.5"></i> Provider Guides
       </button>
       <button onclick="switchTab('rules')" id="tab-btn-rules" class="px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap">
         <i class="fa-solid fa-route mr-1.5"></i> Routing Rules
@@ -211,6 +217,9 @@ export function renderWebUI(): string {
             <p class="text-xs text-slate-400">Manage 14 cloud & SMTP providers with independent daily quotas and rate limits</p>
           </div>
           <div class="flex items-center gap-2">
+            <button onclick="switchTab('guides')" class="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-950/70 border border-indigo-500/40 text-indigo-300 hover:text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+              <i class="fa-solid fa-book-bookmark"></i> Provider Guides
+            </button>
             <button onclick="openAddAccountModal()" class="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
               <i class="fa-solid fa-plus"></i> Add Account
             </button>
@@ -271,7 +280,12 @@ export function renderWebUI(): string {
           </div>
 
           <div>
-            <label class="block text-slate-300 font-semibold mb-1">Provider Type *</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-slate-300 font-semibold">Provider Type *</label>
+              <button type="button" onclick="openCurrentProviderGuide()" class="text-[11px] text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1 font-medium">
+                <i class="fa-solid fa-book-open"></i> ดูคู่มือของเจ้านี้
+              </button>
+            </div>
             <select id="acc-provider" onchange="handleProviderChange()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-indigo-500">
               <option value="ms-graph">Microsoft 365 (MS Graph API - Autonomous Refresh)</option>
               <option value="gmail">Google Workspace / Gmail (OAuth2)</option>
@@ -415,6 +429,981 @@ export function renderWebUI(): string {
         </form>
       </div>
     </div>
+    </section>
+
+    <!-- TAB: Provider Guides & Configuration (14 Email Providers) -->
+    <section id="view-guides" class="hidden space-y-6">
+      <div class="glass p-6 rounded-2xl space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-book-bookmark text-indigo-400"></i> คู่มือการเชื่อมต่อผู้ให้บริการแต่ละเจ้า (Provider Setup Guides)
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">เลือกผู้ให้บริการด้านล่างเพื่อดูขั้นตอนการขอ API Key / OAuth Credentials, ค่าพารามิเตอร์ที่แนะนำ และตัวอย่าง JSON Payload พร้อมกดเชื่อมต่อได้ทันที</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="switchTab('accounts'); openAddAccountModal();" class="text-xs px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/20">
+              <i class="fa-solid fa-plus"></i> Connect New Account
+            </button>
+          </div>
+        </div>
+
+        <!-- Provider Sub-Tabs Pill Navigation (14 Providers) -->
+        <div class="flex gap-2 overflow-x-auto pb-2 border-b border-slate-800/80">
+          <button onclick="switchProviderGuideTab('ms-graph')" id="guide-tab-btn-ms-graph" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition whitespace-nowrap flex items-center gap-2 border border-indigo-400/50">
+            <i class="fa-brands fa-microsoft text-blue-400"></i> Microsoft 365
+          </button>
+          <button onclick="switchProviderGuideTab('gmail')" id="guide-tab-btn-gmail" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-brands fa-google text-red-400"></i> Google Workspace
+          </button>
+          <button onclick="switchProviderGuideTab('aws-ses')" id="guide-tab-btn-aws-ses" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-brands fa-aws text-amber-400"></i> AWS SES
+          </button>
+          <button onclick="switchProviderGuideTab('resend')" id="guide-tab-btn-resend" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-paper-plane text-emerald-400"></i> Resend
+          </button>
+          <button onclick="switchProviderGuideTab('sendgrid')" id="guide-tab-btn-sendgrid" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-envelope-open-text text-cyan-400"></i> SendGrid
+          </button>
+          <button onclick="switchProviderGuideTab('postmark')" id="guide-tab-btn-postmark" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-box-archive text-yellow-400"></i> Postmark
+          </button>
+          <button onclick="switchProviderGuideTab('brevo')" id="guide-tab-btn-brevo" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-paperclip text-blue-400"></i> Brevo
+          </button>
+          <button onclick="switchProviderGuideTab('mailgun')" id="guide-tab-btn-mailgun" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-crosshairs text-rose-400"></i> Mailgun
+          </button>
+          <button onclick="switchProviderGuideTab('mailersend')" id="guide-tab-btn-mailersend" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-paper-plane text-violet-400"></i> MailerSend
+          </button>
+          <button onclick="switchProviderGuideTab('zeptomail')" id="guide-tab-btn-zeptomail" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-bolt text-teal-400"></i> ZeptoMail
+          </button>
+          <button onclick="switchProviderGuideTab('scaleway')" id="guide-tab-btn-scaleway" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-cloud text-purple-400"></i> Scaleway
+          </button>
+          <button onclick="switchProviderGuideTab('sparkpost')" id="guide-tab-btn-sparkpost" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-fire text-orange-400"></i> SparkPost
+          </button>
+          <button onclick="switchProviderGuideTab('mandrill')" id="guide-tab-btn-mandrill" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-brands fa-mailchimp text-amber-300"></i> Mandrill
+          </button>
+          <button onclick="switchProviderGuideTab('generic-smtp')" id="guide-tab-btn-generic-smtp" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800">
+            <i class="fa-solid fa-server text-slate-300"></i> Generic SMTP
+          </button>
+        </div>
+
+        <!-- 1. Microsoft 365 Guide Pane -->
+        <div id="guide-pane-ms-graph" class="space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-blue-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl border border-blue-500/30">
+                <i class="fa-brands fa-microsoft"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Microsoft 365 / Exchange Online <span class="text-[11px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono">providerType: ms-graph</span>
+                </h3>
+                <p class="text-xs text-slate-400">Microsoft Graph API (/v1.0/me/sendMail) พร้อมระบบ Autonomous Token Refresh & Sentbox Auto-Purge</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RegisteredApps" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Azure Portal
+              </a>
+              <button onclick="quickConnectProvider('ms-graph')" class="text-xs px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect MS 365
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-indigo-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ App Credentials จาก Azure Entra ID
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://portal.azure.com/" target="_blank" class="text-indigo-400 underline font-semibold">Azure Portal</a> &rarr; <strong>Microsoft Entra ID</strong> &rarr; <strong>App registrations</strong> &rarr; กด <strong>+ New registration</strong></li>
+                <li>ตั้งชื่อแอปพลิเคชัน (เช่น <code class="text-indigo-300">Thotsakan-Mailer</code>) &rarr; เลือก Account type เป็น <strong>Single tenant</strong> &rarr; กด <strong>Register</strong></li>
+                <li>คัดลอกค่า <code class="text-amber-300 font-mono">Application (client) ID</code> และ <code class="text-amber-300 font-mono">Directory (tenant) ID</code> จากหน้า Overview</li>
+                <li>ไปที่ <strong>API permissions</strong> &rarr; <strong>+ Add a permission</strong> &rarr; <strong>Microsoft Graph</strong> &rarr; เลือก <strong>Application permissions</strong> &rarr; ติ๊กเลือก <code class="text-emerald-400 font-mono">Mail.Send</code> &rarr; กด <strong>Grant admin consent</strong> (สำคัญมาก)</li>
+                <li>ไปที่ <strong>Certificates & secrets</strong> &rarr; แถบ <strong>Client secrets</strong> &rarr; <strong>+ New client secret</strong> &rarr; กำหนดอายุ (แนะนำ 24 เดือน) &rarr; คัดลอกค่าในช่อง <code class="text-amber-300 font-mono">Value</code> ทันที</li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-indigo-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-ms-graph')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-ms-graph" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-indigo-300 overflow-x-auto leading-relaxed">{
+  "name": "Microsoft 365 Production",
+  "providerType": "ms-graph",
+  "fromEmail": "sender@yourcompany.onmicrosoft.com",
+  "fromName": "Corporate Notification",
+  "dailyQuotaLimit": 10000,
+  "rateLimitPerMinute": 30,
+  "credentials": {
+    "tenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "clientId": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+    "clientSecret": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+  },
+  "secretExpiresAt": "2028-09-20T00:00:00Z"
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-indigo-950/30 p-2.5 rounded-lg border border-indigo-500/20">
+                <i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i> ระบบจะขอและหมุนเวียน Bearer Token ให้อัตโนมัติ (Autonomous Refresh) ทุก 60 นาที ไม่ต้องต่ออายุเอง
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Google Workspace / Gmail Guide Pane -->
+        <div id="guide-pane-gmail" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-red-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl border border-red-500/30">
+                <i class="fa-brands fa-google"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Google Workspace / Gmail API <span class="text-[11px] px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 font-mono">providerType: gmail</span>
+                </h3>
+                <p class="text-xs text-slate-400">Gmail REST API v1 (/gmail/v1/users/me/messages/send) ผ่าน OAuth2 Offline Refresh Token</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> GCP Console
+              </a>
+              <button onclick="quickConnectProvider('gmail')" class="text-xs px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect Google
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ OAuth2 Client ID & Refresh Token
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://console.cloud.google.com/" target="_blank" class="text-emerald-400 underline font-semibold">Google Cloud Console</a> &rarr; เปิดใช้งาน <strong>Gmail API</strong> ใน Library</li>
+                <li>ไปที่ <strong>OAuth consent screen</strong> &rarr; กำหนด User Type &rarr; เพิ่ม Scope: <code class="text-emerald-400 font-mono">https://www.googleapis.com/auth/gmail.send</code></li>
+                <li>ไปที่ <strong>Credentials</strong> &rarr; <strong>+ Create Credentials</strong> &rarr; เลือก <strong>OAuth client ID</strong> (Web application) &rarr; คัดลอก <code class="text-amber-300 font-mono">Client ID</code> และ <code class="text-amber-300 font-mono">Client Secret</code></li>
+                <li>เข้าสู่ <a href="https://developers.google.com/oauthplayground/" target="_blank" class="text-emerald-400 underline font-semibold">OAuth 2.0 Playground</a> &rarr; ตั้งค่าใช้ Client ID & Secret ของคุณ &rarr; ขอสิทธิ์ <code class="text-emerald-400 font-mono">gmail.send</code> &rarr; คัดลอก <code class="text-amber-300 font-mono">Refresh token</code></li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-emerald-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-gmail')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-gmail" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">{
+  "name": "Google Workspace Sender",
+  "providerType": "gmail",
+  "fromEmail": "sender@yourcompany.com",
+  "fromName": "Support Team",
+  "dailyQuotaLimit": 2000,
+  "rateLimitPerMinute": 60,
+  "credentials": {
+    "clientId": "xxxx.apps.googleusercontent.com",
+    "clientSecret": "GOCSPX-xxxx",
+    "refreshToken": "1//04xxxx"
+  }
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20">
+                <i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i> โควต้ามาตรฐานของ Google Workspace คือ 2,000 ฉบับ/วัน ต่อบัญชี
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Amazon AWS SES Guide Pane -->
+        <div id="guide-pane-aws-ses" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-amber-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl border border-amber-500/30">
+                <i class="fa-brands fa-aws"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Amazon Web Services Simple Email Service <span class="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">providerType: aws-ses</span>
+                </h3>
+                <p class="text-xs text-slate-400">AWS SES High-Throughput REST v2 Dispatcher พร้อมความจุระดับแสนฉบับต่อวัน</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://console.aws.amazon.com/ses/" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> AWS Console
+              </a>
+              <button onclick="quickConnectProvider('aws-ses')" class="text-xs px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect AWS SES
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ IAM Access Key & SES Setup
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://console.aws.amazon.com/iam/" target="_blank" class="text-amber-400 underline font-semibold">AWS IAM Console</a> &rarr; <strong>Users</strong> &rarr; กด <strong>Create user</strong> (เช่น <code class="text-amber-300">thotsakan-mailer</code>)</li>
+                <li>กำหนด Policy อนุญาตสิทธิ์ <code class="text-emerald-400 font-mono">ses:SendRawEmail</code> และ <code class="text-emerald-400 font-mono">ses:SendEmail</code></li>
+                <li>ไปที่แถบ <strong>Security credentials</strong> &rarr; <strong>Create access key</strong> &rarr; คัดลอก <code class="text-amber-300 font-mono">Access Key ID</code> และ <code class="text-amber-300 font-mono">Secret Access Key</code></li>
+                <li>เข้าสู่ <strong>Amazon SES Console</strong> &rarr; <strong>Verified identities</strong> &rarr; กด <strong>Create identity</strong> เพื่อยืนยัน Domain หรือ Sender Email</li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-amber-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-aws-ses')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-aws-ses" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-amber-300 overflow-x-auto leading-relaxed">{
+  "name": "AWS SES Primary Cluster",
+  "providerType": "aws-ses",
+  "fromEmail": "noreply@yourdomain.com",
+  "fromName": "Core Service",
+  "dailyQuotaLimit": 50000,
+  "rateLimitPerMinute": 300,
+  "credentials": {
+    "apiKey": "AKIAIOSFODNN7EXAMPLE",
+    "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "region": "ap-southeast-1"
+  }
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-amber-950/30 p-2.5 rounded-lg border border-amber-500/20">
+                <i class="fa-solid fa-bolt text-amber-400 mr-1"></i> รองรับ AWS SES ทุก Region (ap-southeast-1, us-east-1, eu-west-1, ฯลฯ)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Resend Guide Pane -->
+        <div id="guide-pane-resend" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-emerald-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl border border-emerald-500/30">
+                <i class="fa-solid fa-paper-plane"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Resend <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">providerType: resend</span>
+                </h3>
+                <p class="text-xs text-slate-400">Developer-first Modern Email Platform พร้อม REST API ที่รวดเร็ว</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://resend.com/overview" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Resend Dashboard
+              </a>
+              <button onclick="quickConnectProvider('resend')" class="text-xs px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect Resend
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ Resend API Key
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://resend.com/overview" target="_blank" class="text-emerald-400 underline font-semibold">Resend Dashboard</a> &rarr; ไปที่เมนู <strong>API Keys</strong></li>
+                <li>คลิกปุ่ม <strong>Create API Key</strong></li>
+                <li>ตั้งชื่อ Key &rarr; เลือกสิทธิ์ <strong>Full access</strong> หรือ <strong>Sending access</strong></li>
+                <li>คัดลอก API Key ที่ขึ้นต้นด้วย <code class="text-amber-300 font-mono">re_...</code></li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-emerald-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-resend')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-resend" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">{
+  "name": "Resend Provider",
+  "providerType": "resend",
+  "fromEmail": "notification@yourdomain.com",
+  "fromName": "System Alert",
+  "dailyQuotaLimit": 10000,
+  "rateLimitPerMinute": 60,
+  "credentials": {
+    "apiKey": "re_123456789_abcdef"
+  }
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20">
+                <i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> รองรับ DKIM/SPF DNS Verify อัตโนมัติในเมนู DNS Verify ของเรา
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. SendGrid Guide Pane -->
+        <div id="guide-pane-sendgrid" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-cyan-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xl border border-cyan-500/30">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Twilio SendGrid <span class="text-[11px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">providerType: sendgrid</span>
+                </h3>
+                <p class="text-xs text-slate-400">Enterprise High-Scale Delivery Platform พร้อม Mail Send REST API v3</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> SendGrid Keys
+              </a>
+              <button onclick="quickConnectProvider('sendgrid')" class="text-xs px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect SendGrid
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-cyan-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ SendGrid API Key
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://app.sendgrid.com/" target="_blank" class="text-cyan-400 underline font-semibold">SendGrid Dashboard</a> &rarr; เมนู <strong>Settings</strong> &rarr; <strong>API Keys</strong></li>
+                <li>คลิกปุ่ม <strong>Create API Key</strong></li>
+                <li>เลือกสิทธิ์เป็น <strong>Restricted Access</strong> &rarr; ในหมวด <strong>Mail Send</strong> ให้เลื่อนเป็น <strong>Full Access</strong></li>
+                <li>คลิก <strong>Create & View</strong> &rarr; คัดลอก API Key ที่ขึ้นต้นด้วย <code class="text-amber-300 font-mono">SG....</code></li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-cyan-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-sendgrid')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-sendgrid" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-cyan-300 overflow-x-auto leading-relaxed">{
+  "name": "SendGrid Primary",
+  "providerType": "sendgrid",
+  "fromEmail": "support@yourdomain.com",
+  "fromName": "Customer Care",
+  "dailyQuotaLimit": 25000,
+  "rateLimitPerMinute": 200,
+  "credentials": {
+    "apiKey": "SG.xxxxxxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+  }
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-cyan-950/30 p-2.5 rounded-lg border border-cyan-500/20">
+                <i class="fa-solid fa-lock text-cyan-400 mr-1"></i> SendGrid API Key ถูกเข้ารหัสผ่าน AES-256-GCM ปลอดภัยในระดับ Hardware-bound
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Postmark Guide Pane -->
+        <div id="guide-pane-postmark" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-yellow-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-xl border border-yellow-500/30">
+                <i class="fa-solid fa-box-archive"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  ActiveCampaign Postmark <span class="text-[11px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-mono">providerType: postmark</span>
+                </h3>
+                <p class="text-xs text-slate-400">Industry leader ด้านอัตราการตก Inbox สูงสุดด้วย Server API Token</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://account.postmarkapp.com/servers" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Postmark Servers
+              </a>
+              <button onclick="quickConnectProvider('postmark')" class="text-xs px-3.5 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect Postmark
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-yellow-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ Server API Token
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://account.postmarkapp.com/" target="_blank" class="text-yellow-400 underline font-semibold">Postmark Console</a> &rarr; เลือก Server ของคุณ (เช่น Transactional Server)</li>
+                <li>ไปที่แถบ <strong>API Tokens</strong></li>
+                <li>คัดลอกค่า <strong>Server API Token</strong> (รหัส GUID)</li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-yellow-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-postmark')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-postmark" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-yellow-300 overflow-x-auto leading-relaxed">{
+  "name": "Postmark Transactional",
+  "providerType": "postmark",
+  "fromEmail": "service@yourdomain.com",
+  "fromName": "Postmark Dispatcher",
+  "dailyQuotaLimit": 50000,
+  "rateLimitPerMinute": 300,
+  "credentials": {
+    "apiKey": "25f18c64-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-yellow-950/30 p-2.5 rounded-lg border border-yellow-500/20">
+                <i class="fa-solid fa-gauge-high text-yellow-400 mr-1"></i> เหมาะสำหรับอีเมลสำคัญระดับ OTP และ Password Reset
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. Brevo Guide Pane -->
+        <div id="guide-pane-brevo" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-blue-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl border border-blue-500/30">
+                <i class="fa-solid fa-paperclip"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Brevo (formerly Sendinblue) <span class="text-[11px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono">providerType: brevo</span>
+                </h3>
+                <p class="text-xs text-slate-400">European Transactional Email Relay พร้อม REST API v3</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://app.brevo.com/settings/keys/api" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Brevo API
+              </a>
+              <button onclick="quickConnectProvider('brevo')" class="text-xs px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect Brevo
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-blue-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ Brevo API Key
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://app.brevo.com/" target="_blank" class="text-blue-400 underline font-semibold">Brevo Dashboard</a> &rarr; คลิกชื่อโปรไฟล์มุมขวาบน &rarr; เลือก <strong>SMTP & API</strong></li>
+                <li>ไปที่แถบ <strong>API keys</strong></li>
+                <li>คลิก <strong>Generate a new API key</strong> &rarr; ตั้งชื่อ Key</li>
+                <li>คัดลอก API Key ที่ขึ้นต้นด้วย <code class="text-amber-300 font-mono">xkeysib-...</code></li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-blue-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-brevo')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-brevo" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-blue-300 overflow-x-auto leading-relaxed">{
+  "name": "Brevo Mail Service",
+  "providerType": "brevo",
+  "fromEmail": "noreply@yourdomain.com",
+  "fromName": "Brevo System",
+  "dailyQuotaLimit": 9000,
+  "rateLimitPerMinute": 60,
+  "credentials": {
+    "apiKey": "xkeysib-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-blue-950/30 p-2.5 rounded-lg border border-blue-500/20">
+                <i class="fa-solid fa-globe text-blue-400 mr-1"></i> รองรับมาตรฐานความปลอดภัย GDPR เต็มรูปแบบ
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8. Mailgun Guide Pane -->
+        <div id="guide-pane-mailgun" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-rose-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl border border-rose-500/30">
+                <i class="fa-solid fa-crosshairs"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Mailgun by Sinch <span class="text-[11px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">providerType: mailgun</span>
+                </h3>
+                <p class="text-xs text-slate-400">High-volume Transactional Mail REST API พร้อมระบบ Domain Routing</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://app.mailgun.com/settings/api_security" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Mailgun Security
+              </a>
+              <button onclick="quickConnectProvider('mailgun')" class="text-xs px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect Mailgun
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-rose-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ Mailgun API Key & Domain
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://app.mailgun.com/" target="_blank" class="text-rose-400 underline font-semibold">Mailgun Dashboard</a> &rarr; ไปที่เมนู <strong>API Security</strong></li>
+                <li>ในหมวด <strong>Mailgun API keys</strong> &rarr; คัดลอก <strong>Primary API key</strong> (ขึ้นต้นด้วย <code class="text-amber-300 font-mono">key-...</code>)</li>
+                <li>ไปที่เมนู <strong>Sending</strong> &rarr; <strong>Domains</strong> &rarr; ตรวจสอบชื่อ Domain หรือ Host สำหรับส่ง</li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-rose-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-mailgun')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-mailgun" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-rose-300 overflow-x-auto leading-relaxed">{
+  "name": "Mailgun Cluster",
+  "providerType": "mailgun",
+  "fromEmail": "info@mg.yourdomain.com",
+  "fromName": "Mailgun Dispatcher",
+  "dailyQuotaLimit": 10000,
+  "rateLimitPerMinute": 100,
+  "credentials": {
+    "apiKey": "key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "host": "mg.yourdomain.com"
+  }
+}</pre>
+              </div>
+              <div class="text-[11px] text-slate-400 bg-rose-950/30 p-2.5 rounded-lg border border-rose-500/20">
+                <i class="fa-solid fa-circle-info text-rose-400 mr-1"></i> รองรับทั้ง US (api.mailgun.net) และ EU Region (api.eu.mailgun.net)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 9. MailerSend Guide Pane -->
+        <div id="guide-pane-mailersend" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-violet-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-400 flex items-center justify-center text-xl border border-violet-500/30">
+                <i class="fa-solid fa-paper-plane"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  MailerSend <span class="text-[11px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 font-mono">providerType: mailersend</span>
+                </h3>
+                <p class="text-xs text-slate-400">Transactional Email API for Developers by MailerLite Team</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://app.mailersend.com/api-tokens" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> MailerSend Tokens
+              </a>
+              <button onclick="quickConnectProvider('mailersend')" class="text-xs px-3.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect MailerSend
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-violet-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ API Token
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://www.mailersend.com/" target="_blank" class="text-violet-400 underline font-semibold">MailerSend Dashboard</a> &rarr; ไปที่เมนู <strong>API Tokens</strong></li>
+                <li>คลิกปุ่ม <strong>Create Token</strong></li>
+                <li>กำหนดสิทธิ์ <strong>Email: Full access</strong> &rarr; คัดลอก Token ที่ขึ้นต้นด้วย <code class="text-amber-300 font-mono">mlsn....</code></li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-violet-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-mailersend')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-mailersend" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-violet-300 overflow-x-auto leading-relaxed">{
+  "name": "MailerSend Secondary",
+  "providerType": "mailersend",
+  "fromEmail": "noreply@yourdomain.com",
+  "fromName": "MailerSend Relay",
+  "dailyQuotaLimit": 10000,
+  "rateLimitPerMinute": 60,
+  "credentials": {
+    "apiKey": "mlsn.xxxxxxxxxxxxxxxxxxxx"
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 10. ZeptoMail Guide Pane -->
+        <div id="guide-pane-zeptomail" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-teal-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl border border-teal-500/30">
+                <i class="fa-solid fa-bolt"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  ZeptoMail by Zoho <span class="text-[11px] px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30 font-mono">providerType: zeptomail</span>
+                </h3>
+                <p class="text-xs text-slate-400">Dedicated Transactional Email Service จาก Zoho Corporation</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://zeptomail.zoho.com/" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> ZeptoMail Console
+              </a>
+              <button onclick="quickConnectProvider('zeptomail')" class="text-xs px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect ZeptoMail
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-teal-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ Send Mail Token
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://zeptomail.zoho.com/" target="_blank" class="text-teal-400 underline font-semibold">ZeptoMail Console</a> &rarr; เลือก Mail Agent ของคุณ</li>
+                <li>ไปที่แถบ <strong>Setup Info</strong></li>
+                <li>ในหมวด <strong>Send Mail Token</strong> ให้คัดลอกค่า <code class="text-amber-300 font-mono">Zoho-enczapikey</code> (เช่น <code class="text-teal-300">PHtE6r0...</code>)</li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-teal-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-zeptomail')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-zeptomail" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-teal-300 overflow-x-auto leading-relaxed">{
+  "name": "ZeptoMail Agent",
+  "providerType": "zeptomail",
+  "fromEmail": "sender@yourdomain.com",
+  "fromName": "Zoho Agent",
+  "dailyQuotaLimit": 10000,
+  "rateLimitPerMinute": 60,
+  "credentials": {
+    "apiKey": "PHtE6r0xxxxxx"
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 11. Scaleway Guide Pane -->
+        <div id="guide-pane-scaleway" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-purple-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl border border-purple-500/30">
+                <i class="fa-solid fa-cloud"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Scaleway Transactional Email <span class="text-[11px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">providerType: scaleway</span>
+                </h3>
+                <p class="text-xs text-slate-400">European Cloud Infrastructure Transactional Email Service</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://console.scaleway.com/iam/api-keys" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Scaleway Keys
+              </a>
+              <button onclick="quickConnectProvider('scaleway')" class="text-xs px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect Scaleway
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-purple-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ API Secret Key
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://console.scaleway.com/" target="_blank" class="text-purple-400 underline font-semibold">Scaleway Console</a> &rarr; เมนู <strong>IAM</strong> &rarr; <strong>API Keys</strong></li>
+                <li>คลิก <strong>Generate API Key</strong></li>
+                <li>คัดลอกค่า <code class="text-amber-300 font-mono">Secret Key</code></li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-purple-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-scaleway')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-scaleway" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-purple-300 overflow-x-auto leading-relaxed">{
+  "name": "Scaleway Transactional",
+  "providerType": "scaleway",
+  "fromEmail": "noreply@yourdomain.com",
+  "fromName": "Scaleway Service",
+  "dailyQuotaLimit": 10000,
+  "rateLimitPerMinute": 60,
+  "credentials": {
+    "apiKey": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 12. SparkPost Guide Pane -->
+        <div id="guide-pane-sparkpost" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-orange-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-xl border border-orange-500/30">
+                <i class="fa-solid fa-fire"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  SparkPost / MessageBird <span class="text-[11px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30 font-mono">providerType: sparkpost</span>
+                </h3>
+                <p class="text-xs text-slate-400">Enterprise High-Capacity Transmissions Engine</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://app.sparkpost.com/account/api-keys" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> SparkPost Keys
+              </a>
+              <button onclick="quickConnectProvider('sparkpost')" class="text-xs px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect SparkPost
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-orange-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ SparkPost API Key
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://app.sparkpost.com/" target="_blank" class="text-orange-400 underline font-semibold">SparkPost Dashboard</a> &rarr; เมนู <strong>Configuration</strong> &rarr; <strong>API Keys</strong></li>
+                <li>คลิก <strong>Create API Key</strong></li>
+                <li>กำหนดสิทธิ์ <strong>Transmissions: Read/Write</strong> &rarr; คัดลอก Key</li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-orange-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-sparkpost')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-sparkpost" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-orange-300 overflow-x-auto leading-relaxed">{
+  "name": "SparkPost Cluster",
+  "providerType": "sparkpost",
+  "fromEmail": "sender@yourdomain.com",
+  "fromName": "SparkPost Relay",
+  "dailyQuotaLimit": 20000,
+  "rateLimitPerMinute": 120,
+  "credentials": {
+    "apiKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 13. Mandrill Guide Pane -->
+        <div id="guide-pane-mandrill" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-amber-500/30">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl border border-amber-500/30">
+                <i class="fa-brands fa-mailchimp"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Mandrill by Mailchimp <span class="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">providerType: mandrill</span>
+                </h3>
+                <p class="text-xs text-slate-400">Mailchimp Transactional Email API for high-volume apps</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="https://mandrillapp.com/settings" target="_blank" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Mandrill Settings
+              </a>
+              <button onclick="quickConnectProvider('mandrill')" class="text-xs px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect Mandrill
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ขั้นตอนการขอ Mandrill API Key
+              </h4>
+              <ol class="list-decimal list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li>เข้าสู่ <a href="https://mandrillapp.com/" target="_blank" class="text-amber-400 underline font-semibold">Mailchimp Transactional Dashboard</a> &rarr; เมนู <strong>Settings</strong> &rarr; <strong>API Keys</strong></li>
+                <li>คลิกปุ่ม <strong>+ New API Key</strong></li>
+                <li>คัดลอกค่า Key ที่ขึ้นต้นด้วย <code class="text-amber-300 font-mono">md-...</code></li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-amber-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-mandrill')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-mandrill" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-amber-300 overflow-x-auto leading-relaxed">{
+  "name": "Mandrill Primary",
+  "providerType": "mandrill",
+  "fromEmail": "contact@yourdomain.com",
+  "fromName": "Mandrill Dispatcher",
+  "dailyQuotaLimit": 15000,
+  "rateLimitPerMinute": 80,
+  "credentials": {
+    "apiKey": "md-xxxxxxxxxxxxxxxxxxxx"
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 14. Generic SMTP Relay Guide Pane -->
+        <div id="guide-pane-generic-smtp" class="hidden space-y-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-slate-600">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-slate-700 text-slate-200 flex items-center justify-center text-xl border border-slate-600">
+                <i class="fa-solid fa-server"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  Generic SMTP Relay <span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">providerType: generic-smtp</span>
+                </h3>
+                <p class="text-xs text-slate-400">เชื่อมต่อ On-Premise Mail Server, Postfix, Exim, Zimbra หรือเซิร์ฟเวอร์ SMTP ภายในองค์กร</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="quickConnectProvider('generic-smtp')" class="text-xs px-3.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Connect SMTP Server
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
+              <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-ol"></i> ข้อมูลที่ต้องเตรียมสำหรับเซิร์ฟเวอร์ SMTP
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-xs text-slate-300 leading-relaxed">
+                <li><strong>Server Host:</strong> Hostname หรือ IP Address ของ Mail Server (เช่น <code class="text-indigo-300">mail.company.com</code>)</li>
+                <li><strong>Port:</strong> พอร์ต <code class="text-indigo-300">587</code> (สำหรับ STARTTLS แนะนำ) หรือ <code class="text-indigo-300">465</code> (SSL Direct) หรือ <code class="text-indigo-300">25</code></li>
+                <li><strong>Authentication:</strong> Username และ Password หรือ App Specific Password</li>
+                <li><strong>TLS/SSL:</strong> รองรับการเชื่อมต่อแบบเข้ารหัส TLS 1.2/1.3 มาตรฐานสากล</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-slate-400"></i> JSON Configuration Payload
+                  </h4>
+                  <button onclick="copyProviderPayload('code-payload-generic-smtp')" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="code-payload-generic-smtp" class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed">{
+  "name": "Corporate Postfix SMTP Relay",
+  "providerType": "generic-smtp",
+  "fromEmail": "notification@company.com",
+  "fromName": "Internal Postfix Relay",
+  "dailyQuotaLimit": 20000,
+  "rateLimitPerMinute": 100,
+  "credentials": {
+    "host": "mail.company.com",
+    "port": 587,
+    "secure": false,
+    "user": "smtp_user@company.com",
+    "pass": "YourComplexPassword123"
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </section>
 
     <!-- TAB 3: Routing Rules Management -->
@@ -1227,13 +2216,60 @@ export function renderWebUI(): string {
 
     const startSpherePaymentPolling = startLicensePaymentPolling;
 
-    function switchTab(tab) {
-      ['quick-send', 'accounts', 'rules', 'suppression', 'dns-verify', 'logs', 'license'].forEach(t => {
-        document.getElementById('view-' + t).classList.add('hidden');
-        document.getElementById('tab-btn-' + t).className = 'px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap';
+    const providerGuideList = [
+      'ms-graph', 'gmail', 'aws-ses', 'resend', 'sendgrid', 'postmark',
+      'brevo', 'mailgun', 'mailersend', 'zeptomail', 'scaleway', 'sparkpost',
+      'mandrill', 'generic-smtp'
+    ];
+
+    function switchProviderGuideTab(p) {
+      providerGuideList.forEach(id => {
+        const pane = document.getElementById('guide-pane-' + id);
+        const btn = document.getElementById('guide-tab-btn-' + id);
+        if (pane) pane.classList.add('hidden');
+        if (btn) btn.className = 'px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 transition whitespace-nowrap flex items-center gap-2 border border-slate-800';
       });
-      document.getElementById('view-' + tab).classList.remove('hidden');
-      document.getElementById('tab-btn-' + tab).className = 'px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white transition whitespace-nowrap';
+      const activePane = document.getElementById('guide-pane-' + p);
+      const activeBtn = document.getElementById('guide-tab-btn-' + p);
+      if (activePane) activePane.classList.remove('hidden');
+      if (activeBtn) activeBtn.className = 'px-3.5 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition whitespace-nowrap flex items-center gap-2 border border-indigo-400/50';
+    }
+
+    function quickConnectProvider(p) {
+      switchTab('accounts');
+      openAddAccountModal();
+      const sel = document.getElementById('acc-provider');
+      if (sel) {
+        sel.value = p;
+        handleProviderChange();
+      }
+    }
+
+    function openCurrentProviderGuide() {
+      const p = document.getElementById('acc-provider').value || 'ms-graph';
+      closeAddAccountModal();
+      switchTab('guides');
+      switchProviderGuideTab(p);
+    }
+
+    function copyProviderPayload(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent.trim());
+      alert('📋 Configuration payload copied to clipboard!');
+    }
+
+    function switchTab(tab) {
+      ['quick-send', 'accounts', 'guides', 'rules', 'suppression', 'dns-verify', 'logs', 'license'].forEach(t => {
+        const el = document.getElementById('view-' + t);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (el) el.classList.add('hidden');
+        if (btn) btn.className = 'px-4 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition whitespace-nowrap';
+      });
+      const activeEl = document.getElementById('view-' + tab);
+      const activeBtn = document.getElementById('tab-btn-' + tab);
+      if (activeEl) activeEl.classList.remove('hidden');
+      if (activeBtn) activeBtn.className = 'px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white transition whitespace-nowrap';
       
       if (tab === 'logs') loadLogs();
       if (tab === 'accounts') loadAccounts();
