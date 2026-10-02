@@ -324,6 +324,29 @@ curl http://localhost:9547/metrics/prometheus
 
 ---
 
+## 🔌 Provider Setup & API Key Acquisition Guides (คู่มือการเชื่อมต่อและขอ API Key 14 ผู้ให้บริการ)
+
+Thotsakan Mail Engine รองรับการเชื่อมต่อกับผู้ให้บริการส่งอีเมลชั้นนำระดับโลก 14 ราย โดยมีคู่มือการขอสิทธิ์, สร้าง API Key / OAuth2 Credentials และตัวอย่าง JSON Configuration Payload ครบถ้วน:
+
+| ผู้ให้บริการ (Provider) | Provider Type | ประเภทการยืนยันตัวตน (Auth Type) | ฟีเจอร์เด่น (Key Features) | 🇹🇭 คู่มือภาษาไทย | 🇬🇧 English Guide |
+| :--- | :---: | :---: | :--- | :---: | :---: |
+| 🟦 **Microsoft 365** | `ms-graph` | Azure Entra ID App Credentials | Autonomous Refresh + Auto Sentbox Cleaner | [ดูคู่มือ](docs/th/guide.md#1-microsoft-365--exchange-online-providertype-ms-graph) | [Read Guide](docs/en/guide.md#1-microsoft-365--exchange-online-providertype-ms-graph) |
+| 🔴 **Google Workspace** | `gmail` | OAuth2 Client ID + Refresh Token | Autonomous Refresh + Auto Sentbox Cleaner | [ดูคู่มือ](docs/th/guide.md#2-google-workspace--gmail-api-providertype-gmail) | [Read Guide](docs/en/guide.md#2-google-workspace--gmail-api-providertype-gmail) |
+| 🟧 **Amazon AWS SES** | `aws-ses` | IAM Access Key + Secret | ต้นทุนต่ำสุด ($0.10/10k) + High Throughput | [ดูคู่มือ](docs/th/guide.md#3-amazon-aws-ses-providertype-aws-ses) | [Read Guide](docs/en/guide.md#3-amazon-aws-ses-providertype-aws-ses) |
+| 🟩 **Resend** | `resend` | API Key (`re_...`) | Developer-First + Modern REST API | [ดูคู่มือ](docs/th/guide.md#4-resend-providertype-resend) | [Read Guide](docs/en/guide.md#4-resend-providertype-resend) |
+| 🔷 **SendGrid** | `sendgrid` | Restricted API Key (`SG....`) | High-Scale Delivery Platform | [ดูคู่มือ](docs/th/guide.md#5-sendgrid-providertype-sendgrid) | [Read Guide](docs/en/guide.md#5-sendgrid-providertype-sendgrid) |
+| 🟨 **Postmark** | `postmark` | Server API Token | 99.8% Inbox Placement สำหรับ OTP | [ดูคู่มือ](docs/th/guide.md#6-postmark-providertype-postmark) | [Read Guide](docs/en/guide.md#6-postmark-providertype-postmark) |
+| 🟦 **Brevo** | `brevo` | API Key (`xkeysib-...`) | EU GDPR Compliance + Transactional API | [ดูคู่มือ](docs/th/guide.md#7-brevo--sendinblue-providertype-brevo) | [Read Guide](docs/en/guide.md#7-brevo--sendinblue-providertype-brevo) |
+| 🟥 **Mailgun** | `mailgun` | Primary API Key (`key-...`) | US/EU Domain Routing + Analytics | [ดูคู่มือ](docs/th/guide.md#8-mailgun-providertype-mailgun) | [Read Guide](docs/en/guide.md#8-mailgun-providertype-mailgun) |
+| 🟪 **MailerSend** | `mailersend` | API Token (`mlsn....`) | Developer Platform by MailerLite | [ดูคู่มือ](docs/th/guide.md#9-mailersend-providertype-mailersend) | [Read Guide](docs/en/guide.md#9-mailersend-providertype-mailersend) |
+| 🟩 **ZeptoMail** | `zeptomail` | Zoho Send Mail Token | Dedicated Transactional by Zoho | [ดูคู่มือ](docs/th/guide.md#10-zeptomail-providertype-zeptomail) | [Read Guide](docs/en/guide.md#10-zeptomail-providertype-zeptomail) |
+| 🟪 **Scaleway** | `scaleway` | IAM Secret Key | European Sovereign Cloud | [ดูคู่มือ](docs/th/guide.md#11-scaleway-providertype-scaleway) | [Read Guide](docs/en/guide.md#11-scaleway-providertype-scaleway) |
+| 🟧 **SparkPost** | `sparkpost` | Transmission API Key | High-Volume Transmissions API | [ดูคู่มือ](docs/th/guide.md#12-sparkpost-providertype-sparkpost) | [Read Guide](docs/en/guide.md#12-sparkpost-providertype-sparkpost) |
+| 🟨 **Mandrill** | `mandrill` | Transactional API Key (`md-...`) | Mailchimp High-Capacity Backend | [ดูคู่มือ](docs/th/guide.md#13-mandrill--mailchimp-transactional-providertype-mandrill) | [Read Guide](docs/en/guide.md#13-mandrill--mailchimp-transactional-providertype-mandrill) |
+| ⬜ **Generic SMTP** | `generic-smtp` | Host, Port, User, Pass / TLS | On-Premise (Postfix / Zimbra / Exchange) | [ดูคู่มือ](docs/th/guide.md#14-generic-smtp-relay-providertype-generic-smtp) | [Read Guide](docs/en/guide.md#14-generic-smtp-relay-providertype-generic-smtp) |
+
+---
+
 ## 📚 Complete Multi-Language Documentation
 
 - 🇬🇧 **[English Documentation (docs/en/guide.md)](docs/en/guide.md)** — Complete Setup, 3-Minute AWS SES Guide, Architecture & API Reference.
