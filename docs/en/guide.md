@@ -707,13 +707,85 @@ curl -X POST http://localhost:9547/v1/queue/purge-dead \
 
 ## 9. Run with Docker from GitHub Container Registry (GHCR)
 
-Run Thotsakan Mail Engine instantly with one command:
+### 9.1 One-Liner Docker Run (Production Ready)
 ```bash
 docker run -d --name thotsakan \
+  --restart unless-stopped \
   -p 9547:9547 \
   -p 9548:9548 \
   -v $(pwd)/data:/app/data \
+  -e ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
   ghcr.io/thabot/thotsakan-mail:latest
+```
+Once started, access the Web Console at `http://localhost:9547` and Swagger API Docs at `http://localhost:9547/docs`.
+
+### 9.2 Run with Docker Compose (`docker-compose.yml`)
+```yaml
+services:
+  thotsakan-mail:
+    image: ghcr.io/thabot/thotsakan-mail:latest
+    container_name: thotsakan-mail-engine
+    restart: unless-stopped
+    ports:
+      - "9547:9547"   # Web Console & REST API
+      - "9548:9548"   # Inbound SMTP Receiver
+    environment:
+      - NODE_ENV=production
+      - PORT=9547
+      - SMTP_PORT=9548
+      - DB_PATH=/app/data/thotsakan.db
+      - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - LOG_RETENTION_DAYS=90
+    volumes:
+      - ./data:/app/data
+```
+Start the container:
+```bash
+docker compose up -d
+```
+
+### 9.3 Email Account Configuration & Per-Account Rate Limiting
+
+#### Option 1: Via Web Console UI
+1. Open `http://<server-ip>:9547` in your browser.
+2. Navigate to **Accounts** -> click **+ Add Account**.
+3. Choose from 14 supported providers (Gmail OAuth2/Service Account, MS Graph, AWS SES, Resend, SendGrid, Postmark, Brevo, Mailgun, SMTP Relay).
+4. Define Account Limits:
+   - **Daily Quota Limit:** Maximum daily email sending volume (e.g. `5000` emails/day; auto-resets at midnight).
+   - **Rate Limit Per Minute:** Sliding window velocity ceiling (e.g. `60` emails/min) to prevent cloud provider bans.
+   - **Fallback Account:** Automatic failover backup account if quota or per-minute rate limits are exceeded.
+5. Click **Test Connection** to verify provider credentials.
+
+#### Option 2: Via REST API (`POST /v1/accounts`)
+```bash
+curl -X POST http://localhost:9547/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Production SES Primary",
+    "providerType": "aws-ses",
+    "fromEmail": "sender@yourcompany.com",
+    "fromName": "Company System",
+    "credentials": {
+      "region": "ap-southeast-1",
+      "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+      "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    },
+    "dailyQuotaLimit": 50000,
+    "rateLimitPerMinute": 300,
+    "fallbackAccountId": "acc_backup_resend"
+  }'
+```
+
+#### Updating Limits on Existing Account (`PUT /v1/accounts/:id`)
+```bash
+curl -X PUT http://localhost:9547/v1/accounts/acc_123456 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "dailyQuotaLimit": 100000,
+    "rateLimitPerMinute": 500
+  }'
 ```
 ## 10. Purchase & Activate Licenses with NOWPayments (Card & Crypto)
 
