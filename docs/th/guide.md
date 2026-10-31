@@ -706,15 +706,87 @@ curl -X POST http://localhost:9547/v1/queue/purge-dead \
 
 ## 9. การรันด้วย Docker Image จาก GitHub Container Registry (GHCR)
 
-สามารถรัน Thotsakan ได้ทันทีด้วยคำสั่งบรรทัดเดียว:
+### 9.1 การรันด้วยคำสั่ง Docker Run บรรทัดเดียว (Production Ready)
 ```bash
 docker run -d --name thotsakan \
+  --restart unless-stopped \
   -p 9547:9547 \
   -p 9548:9548 \
   -v $(pwd)/data:/app/data \
+  -e ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
   ghcr.io/thabot/thotsakan-mail:latest
 ```
 เมื่อรันเสร็จ เปิดหน้าเว็บคอนโซลได้ที่ `http://localhost:9547` และเปิดดูเอกสาร Interactive Swagger ได้ที่ `http://localhost:9547/docs`
+
+### 9.2 การรันด้วย Docker Compose (`docker-compose.yml`)
+สร้างไฟล์ `docker-compose.yml` สำหรับรันบนเซิร์ฟเวอร์:
+```yaml
+services:
+  thotsakan-mail:
+    image: ghcr.io/thabot/thotsakan-mail:latest
+    container_name: thotsakan-mail-engine
+    restart: unless-stopped
+    ports:
+      - "9547:9547"   # Web Console & REST API
+      - "9548:9548"   # Inbound SMTP Receiver
+    environment:
+      - NODE_ENV=production
+      - PORT=9547
+      - SMTP_PORT=9548
+      - DB_PATH=/app/data/thotsakan.db
+      - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - LOG_RETENTION_DAYS=90
+    volumes:
+      - ./data:/app/data
+```
+สั่งรันคอนเทนเนอร์:
+```bash
+docker compose up -d
+```
+
+### 9.3 การตั้งค่า Email Account และจำกัด Limit รายบัญชี (Email Configuration & Limits)
+
+#### ทางเลือกที่ 1: ตั้งค่าผ่านหน้า Web Console UI (สะดวกที่สุด)
+1. เปิดเบราว์เซอร์ไปที่ `http://<server-ip>:9547`
+2. ไปที่เมนู **Accounts** -> กดปุ่ม **+ Add Account**
+3. เลือก **Provider Type** (เช่น Gmail OAuth2/Service Account, MS Graph, AWS SES, Resend, SendGrid, Postmark, Brevo, Mailgun, SMTP Relay)
+4. กำหนดขีดจำกัดความเร็วและโควต้าการส่ง:
+   - **Daily Quota Limit:** จำนวนอีเมลสูงสุดที่อนุญาตให้ส่งได้ต่อวัน (เช่น `5000` ฉบับ/วัน มีระบบรีเซ็ตอัตโนมัติทุกเที่ยงคืน)
+   - **Rate Limit Per Minute:** เพดานความเร็วสูงสุดต่อนาที (เช่น `60` ฉบับ/นาที ใช้ Sliding Window 60 วิ เพื่อป้องกันโดน Provider แบน)
+   - **Fallback Account:** บัญชีสำรองเมื่อบัญชีหลักส่งเกิน Rate Limit หรือครบโควต้าประจำวัน ระบบจะสลับไปส่งด้วยบัญชีนี้ให้ทันที
+5. กดปุ่ม **Test Connection** เพื่อทดสอบเชื่อมต่อ Credentials
+
+#### ทางเลือกที่ 2: ตั้งค่าผ่าน REST API (`POST /v1/accounts`)
+```bash
+curl -X POST http://localhost:9547/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Production SES Primary",
+    "providerType": "aws-ses",
+    "fromEmail": "sender@yourcompany.com",
+    "fromName": "Company System",
+    "credentials": {
+      "region": "ap-southeast-1",
+      "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+      "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    },
+    "dailyQuotaLimit": 50000,
+    "rateLimitPerMinute": 300,
+    "fallbackAccountId": "acc_backup_resend"
+  }'
+```
+
+#### การปรับปรุง Limit ภายหลัง (`PUT /v1/accounts/:id`)
+```bash
+curl -X PUT http://localhost:9547/v1/accounts/acc_123456 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "dailyQuotaLimit": 100000,
+    "rateLimitPerMinute": 500
+  }'
+```
 
 ---
 

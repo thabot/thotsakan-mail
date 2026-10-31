@@ -52,9 +52,11 @@ Why high-growth engineering teams choose Thotsakan Mail Engine over monolithic n
 ### Option 1: One-Liner Docker Run (Production Ready)
 ```bash
 docker run -d --name thotsakan \
+  --restart unless-stopped \
   -p 9547:9547 \
   -p 9548:9548 \
   -v $(pwd)/data:/app/data \
+  -e ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
   ghcr.io/thabot/thotsakan-mail:latest
 ```
 Access the **Web Console** at `http://localhost:9547` and **Interactive Swagger API Docs** at `http://localhost:9547/docs`.
@@ -66,8 +68,51 @@ Access the **Web Console** at `http://localhost:9547` and **Interactive Swagger 
 | **`9548`** | **SMTP** | **Inbound SMTP Relay Bridge:** Local RFC822 MIME SMTP server for legacy integrations (**WordPress, Laravel, Django, ERP, CRM, Scanners**). |
 
 ### Option 2: Run with Docker Compose
+Create a `docker-compose.yml` file:
+```yaml
+services:
+  thotsakan-mail:
+    image: ghcr.io/thabot/thotsakan-mail:latest
+    container_name: thotsakan-mail-engine
+    restart: unless-stopped
+    ports:
+      - "9547:9547"
+      - "9548:9548"
+    environment:
+      - NODE_ENV=production
+      - PORT=9547
+      - SMTP_PORT=9548
+      - DB_PATH=/app/data/thotsakan.db
+      - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - LOG_RETENTION_DAYS=90
+    volumes:
+      - ./data:/app/data
+```
+Start the container:
 ```bash
 docker compose up -d
+```
+
+### ⚙️ Quick Email Account & Rate Limit Configuration
+Once running, configure accounts and per-account throughput limits:
+1. **Via Web Console UI:** Open `http://localhost:9547` -> **Accounts** -> **+ Add Account** to set credentials and define:
+   - **Daily Quota Limit:** Maximum daily email sending volume (e.g. 5,000 emails/day; auto-resets at midnight).
+   - **Rate Limit Per Minute:** Sliding window velocity ceiling (e.g. 60 emails/min) to prevent cloud provider bans.
+   - **Fallback Account:** Automatic failover account if quota or per-minute rate limits are exceeded.
+2. **Via REST API:**
+```bash
+curl -X POST http://localhost:9547/v1/accounts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "name": "Production Resend",
+    "providerType": "resend",
+    "fromEmail": "noreply@yourdomain.com",
+    "fromName": "Billing Department",
+    "credentials": { "apiKey": "re_123456789" },
+    "dailyQuotaLimit": 10000,
+    "rateLimitPerMinute": 60
+  }'
 ```
 
 ### Option 3: Run with Bun Directly
