@@ -83,6 +83,7 @@ export class EmailLogRepository {
     pending: number;
     processing: number;
     suppressed: number;
+    bounced: number;
   } {
     let sql = `
       SELECT 
@@ -91,7 +92,8 @@ export class EmailLogRepository {
         SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
         SUM(CASE WHEN status IN ('PENDING', 'THROTTLED') THEN 1 ELSE 0 END) as pending,
         SUM(CASE WHEN status = 'PROCESSING' THEN 1 ELSE 0 END) as processing,
-        SUM(CASE WHEN status = 'SUPPRESSED' THEN 1 ELSE 0 END) as suppressed
+        SUM(CASE WHEN status = 'SUPPRESSED' THEN 1 ELSE 0 END) as suppressed,
+        SUM(CASE WHEN status = 'BOUNCED' THEN 1 ELSE 0 END) as bounced
       FROM email_logs
     `;
     const params: any[] = [];
@@ -108,6 +110,7 @@ export class EmailLogRepository {
       pending: row?.pending || 0,
       processing: row?.processing || 0,
       suppressed: row?.suppressed || 0,
+      bounced: row?.bounced || 0,
     };
   }
 
@@ -173,6 +176,58 @@ export class EmailLogRepository {
       WHERE job_id = ?
     `);
     stmt.run(reason, jobId);
+  }
+
+  public markBounced(
+    identifier: { messageId?: string; email?: string; jobId?: string },
+    errorDetails: string
+  ): number {
+    let updated = 0;
+    if (identifier.jobId) {
+      const stmt = this.db.prepare(`
+        UPDATE email_logs
+        SET status = 'BOUNCED', error_details = ?
+        WHERE job_id = ?
+      `);
+      updated = stmt.run(errorDetails, identifier.jobId).changes;
+    } else if (identifier.messageId) {
+      const stmt = this.db.prepare(`
+        UPDATE email_logs
+        SET status = 'BOUNCED', error_details = ?
+        WHERE message_id = ?
+      `);
+      updated = stmt.run(errorDetails, identifier.messageId).changes;
+    }
+
+    if (updated === 0 && identifier.email) {
+      const stmt = this.db.prepare(`
+        UPDATE email_logs
+        SET status = 'BOUNCED', error_details = ?
+        WHERE job_id IN (
+          SELECT job_id FROM email_logs
+          WHERE to_recipients LIKE ?
+            AND status IN ('SENT', 'PROCESSING', 'PENDING')
+          ORDER BY created_at DESC
+          LIMIT 1
+        )
+      `);
+      updated = stmt.run(errorDetails, `%"${identifier.email}"%`).changes;
+      if (updated === 0) {
+        const stmt2 = this.db.prepare(`
+          UPDATE email_logs
+          SET status = 'BOUNCED', error_details = ?
+          WHERE job_id IN (
+            SELECT job_id FROM email_logs
+            WHERE to_recipients LIKE ?
+              AND status IN ('SENT', 'PROCESSING', 'PENDING')
+            ORDER BY created_at DESC
+            LIMIT 1
+          )
+        `);
+        updated = stmt2.run(errorDetails, `%${identifier.email}%`).changes;
+      }
+    }
+    return updated;
   }
 
   public recordOpen(jobId: string): void {

@@ -3,11 +3,13 @@ import { createHmac } from 'node:crypto';
 import type { Database } from 'bun:sqlite';
 import { EmailLogRepository } from '../../database/repositories/email-log.repository.js';
 import { SuppressionService } from '../../services/suppression.service.js';
+import { DeadLetterService } from '../../services/dead-letter.service.js';
 
 export function createWebhooksRoute(db: Database) {
   const app = new Hono();
   const logRepo = new EmailLogRepository(db);
   const suppressionService = new SuppressionService(db);
+  const deadLetterService = new DeadLetterService();
 
   // 1. AWS SES Webhook (via AWS SNS Notification)
   app.post('/v1/webhooks/aws-ses', async (c) => {
@@ -27,13 +29,28 @@ export function createWebhooksRoute(db: Database) {
 
         if (eventType === 'Bounce') {
           const bounce = message.bounce;
-          const bounceType = bounce?.bounceType; // 'Permanent' or 'Transient'
+          const bounceType = bounce?.bounceType || 'Bounce'; // 'Permanent' or 'Transient'
+          const bounceSubType = bounce?.bounceSubType ? ` / ${bounce.bounceSubType}` : '';
           const recipients = bounce?.bouncedRecipients?.map((r: any) => r.emailAddress) || [];
+          const diag = bounce?.bouncedRecipients?.[0]?.diagnosticCode || '';
+          const reasonMsg = `[AWS-SES Bounce] ${bounceType}${bounceSubType}: ${diag || 'Recipient rejected or mailbox unavailable'}`;
 
           for (const email of recipients) {
             if (bounceType === 'Permanent') {
               suppressionService.suppress(email, 'default_tenant', 'BOUNCE');
             }
+            logRepo.markBounced({ messageId: mail?.messageId, email }, reasonMsg);
+            await deadLetterService.notify({
+              jobId: mail?.messageId || 'ses_bounce',
+              tenantId: 'default_tenant',
+              recipients: [email],
+              subject: mail?.commonHeaders?.subject || 'Undelivered Email',
+              priority: 'high',
+              attempts: 1,
+              maxAttempts: 1,
+              lastError: reasonMsg,
+              failedAt: new Date().toISOString(),
+            });
           }
         } else if (eventType === 'Complaint') {
           const complaint = message.complaint;
@@ -77,8 +94,22 @@ export function createWebhooksRoute(db: Database) {
 
       if (eventType === 'email.bounced') {
         const email = data?.to?.[0];
+        const resendMsgId = data?.email_id || data?.id;
+        const reasonMsg = `[Resend Bounce] ${data?.bounce_type || 'Bounced'}: ${data?.bounce_message || 'Undeliverable address or mailbox full'}`;
         if (email) {
           suppressionService.suppress(email, 'default_tenant', 'BOUNCE');
+          logRepo.markBounced({ messageId: resendMsgId, email }, reasonMsg);
+          await deadLetterService.notify({
+            jobId: resendMsgId || 'resend_bounce',
+            tenantId: 'default_tenant',
+            recipients: [email],
+            subject: data?.subject || 'Undelivered Email',
+            priority: 'high',
+            attempts: 1,
+            maxAttempts: 1,
+            lastError: reasonMsg,
+            failedAt: new Date().toISOString(),
+          });
         }
       } else if (eventType === 'email.complained') {
         const email = data?.to?.[0];
@@ -107,6 +138,19 @@ export function createWebhooksRoute(db: Database) {
 
         if (ev.event === 'bounce' || ev.event === 'dropped') {
           suppressionService.suppress(email, 'default_tenant', 'BOUNCE');
+          const reasonMsg = `[SendGrid ${ev.event}] ${ev.reason || ev.status || 'Undeliverable recipient or quota exceeded'}`;
+          logRepo.markBounced({ messageId: ev.sg_message_id, email }, reasonMsg);
+          await deadLetterService.notify({
+            jobId: ev.sg_message_id || 'sendgrid_bounce',
+            tenantId: 'default_tenant',
+            recipients: [email],
+            subject: 'Undelivered Email',
+            priority: 'high',
+            attempts: 1,
+            maxAttempts: 1,
+            lastError: reasonMsg,
+            failedAt: new Date().toISOString(),
+          });
         } else if (ev.event === 'spamreport') {
           suppressionService.suppress(email, 'default_tenant', 'SPAM');
         } else if (ev.event === 'unsubscribe') {
