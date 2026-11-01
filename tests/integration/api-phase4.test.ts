@@ -145,13 +145,22 @@ describe('Integration: Phase 4 Web UI, Templates, Tracking & Webhooks Routes', (
   });
 
   it('Webhooks AWS SES should process bounce and complaint events', async () => {
+    // Insert a sent log to test bounce transition
+    db.prepare(`
+      INSERT INTO email_logs (job_id, tenant_id, to_recipients, subject, status)
+      VALUES ('job_bounce_test', 'tenant_p4', '["hardbounce@example.com"]', 'Test Bounced', 'SENT')
+    `).run();
+
     const bouncePayload = {
       Type: 'Notification',
       Message: JSON.stringify({
         notificationType: 'Bounce',
         bounce: {
           bounceType: 'Permanent',
-          bouncedRecipients: [{ emailAddress: 'hardbounce@example.com' }],
+          bounceSubType: 'General',
+          bouncedRecipients: [
+            { emailAddress: 'hardbounce@example.com', diagnosticCode: 'smtp; 550 5.1.1 User unknown' },
+          ],
         },
       }),
     };
@@ -166,5 +175,10 @@ describe('Integration: Phase 4 Web UI, Templates, Tracking & Webhooks Routes', (
     // Verify suppressed
     const isSuppressed: any = db.prepare('SELECT 1 FROM suppression_list WHERE email = ?').get('hardbounce@example.com');
     expect(isSuppressed).not.toBeNull();
+
+    // Verify log updated to BOUNCED
+    const updatedLog: any = db.prepare('SELECT status, error_details FROM email_logs WHERE job_id = ?').get('job_bounce_test');
+    expect(updatedLog.status).toBe('BOUNCED');
+    expect(updatedLog.error_details).toContain('User unknown');
   });
 });

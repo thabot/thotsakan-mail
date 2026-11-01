@@ -1745,7 +1745,7 @@ export function renderWebUI(): string {
               <td class="px-4 py-3 truncate max-w-xs">\${log.subject}</td>
               <td class="px-4 py-3 font-semibold \${log.priority === 'high' ? 'text-amber-400' : 'text-slate-400'}">\${log.priority}</td>
               <td class="px-4 py-3">
-                <span class="px-2 py-0.5 rounded-full text-xs \${log.status === 'SENT' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : log.status === 'FAILED' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
+                <span class="px-2 py-0.5 rounded-full text-xs \${log.status === 'SENT' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : log.status === 'FAILED' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : log.status === 'BOUNCED' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}" \${log.error_details ? 'title="' + log.error_details.replace(/"/g, '&quot;') + '"' : ''}>
                   \${log.status}
                 </span>
               </td>
